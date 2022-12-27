@@ -10,6 +10,7 @@ import net.group.androidlocalmessanger.network.client.controller.AuthController.
 import net.group.androidlocalmessanger.network.client.controller.ClientController.TAG
 import net.group.androidlocalmessanger.network.client.controller.ClientController.input
 import net.group.androidlocalmessanger.network.client.controller.MainController.refreshGroups
+import net.group.androidlocalmessanger.network.client.controller.MainController.refreshUsers
 import java.io.IOException
 
 object ClientReceiver {
@@ -20,16 +21,16 @@ object ClientReceiver {
 
         withContext(Dispatchers.IO) {
 
-
             while (true) {
                 try {
 
                     val response = input.readObject() as Response<*>
                     Log.d(TAG, "Receiver: $response")
                     when (response.responseTypes) {
-                        ResponseTypes.AllGroups -> refreshGroups(response)
                         ResponseTypes.Login -> loginResponse(response)
                         ResponseTypes.Register -> registerResponse(response)
+                        ResponseTypes.AllGroups -> refreshGroups(response)
+                        ResponseTypes.AllUsers -> refreshUsers(response)
                         null -> TODO()
                     }
                 } catch (e: IOException) {

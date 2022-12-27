@@ -61,6 +61,7 @@ class TcpClientHandler(
                                 Order.SendMessage.name -> sendMessage(orderData)
                                 Order.GetMessage.name -> {}
                                 Order.GetMyGroups.name -> sendUserGroups()
+                                Order.GetAllUsers.name -> sendUsers()
                             }
 
                         }
@@ -85,7 +86,14 @@ class TcpClientHandler(
 
     private suspend fun sendUserGroups() {
         val groups = groupRepository.getAllGroups()
-        sendResponse(Response(ResponseCode.OK, ResponseTypes.AllGroups, groups))
+
+        sendResponse(Response(ResponseCode.OK, ResponseTypes.AllGroups,
+            groups.filter {
+                if (it.users.contains(client.user))
+                    return@filter true
+                return@filter false
+            }
+        ))
     }
 
 
@@ -104,6 +112,17 @@ class TcpClientHandler(
             output.flush()
             Log.d(TAG, "TcpClientHandler: sendResponse: $response")
         }
+    }
+
+    suspend fun sendUsers() {
+        val users = userRepository.getAllUsers()
+        sendResponse(
+            Response(
+                code = ResponseCode.OK,
+                responseTypes = ResponseTypes.AllUsers,
+                users
+            )
+        )
     }
 
 }

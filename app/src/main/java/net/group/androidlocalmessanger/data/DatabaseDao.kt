@@ -31,4 +31,6 @@ interface DatabaseDao {
     @Query("SELECT * FROM groups")
     suspend fun getAllGroups(): List<Group>
 
+    @Query("SELECT * FROM users")
+    suspend fun getAllUsers(): List<User>
 }

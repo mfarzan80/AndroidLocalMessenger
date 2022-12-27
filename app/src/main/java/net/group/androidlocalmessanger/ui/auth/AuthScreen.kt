@@ -2,7 +2,6 @@ package net.group.androidlocalmessanger.ui.auth
 
 import android.util.Log
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
@@ -19,7 +18,7 @@ import net.group.androidlocalmessanger.module.User
 import net.group.androidlocalmessanger.ui.component.ActivityView
 import net.group.androidlocalmessanger.ui.component.LoadingErrorDataView
 import net.group.androidlocalmessanger.ui.component.OutlinedInput
-import net.group.androidlocalmessanger.ui.component.VerticalSpacer
+import net.group.androidlocalmessanger.ui.component.VSpacer
 import net.group.androidlocalmessanger.ui.navigation.Screen
 
 @Composable
@@ -39,7 +38,7 @@ fun AuthScreen(navController: NavController, authViewModel: AuthViewModel) {
                     valueState = name,
                     label = "Name"
                 )
-                VerticalSpacer()
+                VSpacer()
             }
 
             OutlinedInput(
@@ -47,14 +46,14 @@ fun AuthScreen(navController: NavController, authViewModel: AuthViewModel) {
                 label = "Email"
             )
 
-            VerticalSpacer()
+            VSpacer()
 
             OutlinedInput(
                 valueState = password,
                 label = "Password",
             )
 
-            VerticalSpacer(20.dp)
+            VSpacer(20.dp)
 
             Button(modifier = Modifier.fillMaxWidth(), onClick = {
                 authViewModel.auth(
@@ -65,7 +64,7 @@ fun AuthScreen(navController: NavController, authViewModel: AuthViewModel) {
                 Text(if (login.value) "Login" else "Register")
             }
 
-            VerticalSpacer(10.dp)
+            VSpacer(10.dp)
 
             OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                 login.value = !login.value

@@ -71,17 +71,18 @@ fun <T> LoadingErrorDataView(
 fun ActivityView(
     modifier: Modifier = Modifier,
     tittle: String = "Android Local Messenger",
+    floatingActionButton: @Composable () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     Scaffold(modifier = modifier, topBar = {
-        TopAppBar() {
+        TopAppBar(contentColor = MaterialTheme.colors.onPrimary) {
             Text(
                 modifier = Modifier.padding(horizontal = 10.dp),
                 text = tittle,
                 style = MaterialTheme.typography.h6
             )
         }
-    }) {
+    }, floatingActionButton = floatingActionButton) {
         content()
     }
 }
