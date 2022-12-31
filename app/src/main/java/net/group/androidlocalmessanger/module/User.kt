@@ -5,13 +5,17 @@ import androidx.room.PrimaryKey
 import java.io.Serializable
 
 @Entity(tableName = "users")
-data class User(@PrimaryKey var email: String, val password: String) : Serializable {
+data class User(@PrimaryKey var userEmail: String, val password: String) : Serializable {
     var serialVersionUID = 6529685098267757690L
 
     lateinit var name: String
     var profilePath: String? = null
+    var phoneNumber: String? = null
     var id: String? = null
 
+    var showPhoneNumber: Boolean = false
+    var showProfile: Boolean = true
+    var showEmail: Boolean = true
 
     constructor(email: String, password: String, name: String) : this(email, password) {
         this.name = name
@@ -20,8 +24,16 @@ data class User(@PrimaryKey var email: String, val password: String) : Serializa
 
     override fun equals(other: Any?): Boolean {
         return if (other is User)
-            other.email == email
+            other.userEmail == userEmail
         else
             false
     }
+
+    override fun hashCode(): Int {
+        var result = userEmail.hashCode()
+        result = 31 * result + (id?.hashCode() ?: 0)
+        return result
+    }
 }
+
+

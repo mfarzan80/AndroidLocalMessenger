@@ -1,27 +1,20 @@
 package net.group.androidlocalmessanger.ui.main
 
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.*
+import net.group.androidlocalmessanger.network.client.controller.ClientController
 import net.group.androidlocalmessanger.network.client.controller.MainController
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
-import java.net.Socket
 
 class MainViewModule : ViewModel() {
 
-    val groups: MutableState<DataOrException<List<Group>, Boolean, ResponseCode>> =
-        mutableStateOf(
-            DataOrException(mutableStateListOf(), false, null)
-        )
+    val groups = mutableStateMapOf<String, GroupWithUsers>()
+    val groupLoading = mutableStateOf(false)
 
     val users: MutableState<DataOrException<List<User>, Boolean, ResponseCode>> = mutableStateOf(
         DataOrException(listOf(), false, null)
@@ -42,35 +35,64 @@ class MainViewModule : ViewModel() {
 
     }
 
+    fun addGroup(groupWithUsers: GroupWithUsers) {
+        viewModelScope.launch {
+            if (!groups.contains(groupWithUsers.group.groupId)) {
+                groupsLoading()
+                MainController.createGroup(groupWithUsers)
+            }
+        }
+    }
 
-    fun setGroups(dataOrException: DataOrException<List<Group>, Boolean, ResponseCode>) {
-        groups.value = dataOrException
+
+    fun setGroups(newGroups: List<GroupWithUsers>) {
+        newGroups.forEach {
+            groups[it.group.groupId] = it
+        }
+    }
+
+    fun updateGroup(groupWithUsers: GroupWithUsers) {
+        groups[groupWithUsers.group.groupId] = groupWithUsers
     }
 
     fun setUsers(dataOrException: DataOrException<List<User>, Boolean, ResponseCode>) {
         users.value = dataOrException
     }
 
-    fun usersLoading() {
+    private fun usersLoading() {
         users.value = users.value.copy(loading = true)
     }
 
-    fun groupsLoading() {
-        groups.value = groups.value.copy(loading = true)
+    private fun groupsLoading() {
+        groupLoading.value = true
     }
 
-    fun getPvGroup(user: User): Group {
-        var group: Group? = null
-        groups.value.data!!.forEach {
-            if (it.type == Group.GROUP_TYPE_CHAT && it.users.contains(user)) {
-                group = it
+    fun getPvGroup(user: User): GroupWithUsers {
+        var groupWithUsers: GroupWithUsers? = null
+        groups.values.forEach {
+            if (it.group.type == Group.GROUP_TYPE_CHAT && it.users.contains(user)) {
+                groupWithUsers = it
                 return@forEach
             }
         }
-        return if (group != null)
-            group!!
-        else
-            Group(name = "Chat", Group.GROUP_TYPE_CHAT)
+        return if (groupWithUsers != null)
+            groupWithUsers!!
+        else {
+            groupWithUsers = GroupWithUsers(
+                Group(name = "Chat", Group.GROUP_TYPE_CHAT),
+                listOf(user, ClientController.client.user!!)
+            )
+            addGroup(groupWithUsers!!)
+            groupWithUsers!!
+        }
 
+    }
+
+
+    fun getUser(): User {
+        return ClientController.client.user!!
+    }
+    fun isOwnerUser(message: Message): Boolean {
+        return getUser() == message.sender
     }
 }

@@ -1,9 +1,11 @@
 package net.group.androidlocalmessanger.module
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.io.Serializable
-import java.util.*
+import java.util.UUID
+import kotlin.collections.ArrayList
 
 
 @Entity(tableName = "groups")
@@ -17,20 +19,20 @@ data class Group(val name: String, val type: String) : Serializable {
     }
 
     @PrimaryKey
-    var id: String = UUID.randomUUID().toString()
-    var users = HashSet<User>()
-    var admins = HashSet<User>()
-    var messages = HashSet<Message>()
+    var groupId: String = UUID.randomUUID().toString()
 
-    fun getGroupName(user: User): String {
-        if (type == GROUP_TYPE_CHAT) {
-            users.forEach {
-                if (it != user)
-                    return it.name
-            }
-            return user.name
-        } else
-            return name
+    var adminIds = ArrayList<String>()
+
+    var messages = ArrayList<Message>()
+
+    override fun equals(other: Any?): Boolean {
+        if (other is Group)
+            return groupId == other.groupId
+        return false
+    }
+
+    override fun hashCode(): Int {
+        return groupId.hashCode()
     }
 
 

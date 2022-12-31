@@ -44,12 +44,13 @@ fun <T> LoadingErrorDataView(
     Box(modifier = modifier) {
         if (dataOrException.data != null) {
             loadingJob.value?.cancel()
+            loading.value = false
             onSuccessContent()
         } else if (dataOrException.loading == true) {
             LaunchedEffect(key1 = dataOrException.loading) {
 
                 loadingJob.value = CoroutineScope(Dispatchers.Main).launch {
-                    delay(200)
+                    delay(50)
                     loading.value = true
                     coroutineContext.job.join()
                 }
@@ -57,6 +58,7 @@ fun <T> LoadingErrorDataView(
 
         } else if (dataOrException.info != null) {
             loadingJob.value?.cancel()
+            loading.value = false
             Text(
                 text = getStringByResponse(dataOrException.info!!)!!,
                 color = MaterialTheme.colors.error
@@ -72,17 +74,23 @@ fun ActivityView(
     modifier: Modifier = Modifier,
     tittle: String = "Android Local Messenger",
     floatingActionButton: @Composable () -> Unit = {},
+    topAppBar: @Composable () -> Unit = {
+        Text(
+            modifier = Modifier.padding(horizontal = 10.dp),
+            text = tittle,
+            style = MaterialTheme.typography.h6
+        )
+    },
     content: @Composable () -> Unit
 ) {
-    Scaffold(modifier = modifier, topBar = {
-        TopAppBar(contentColor = MaterialTheme.colors.onPrimary) {
-            Text(
-                modifier = Modifier.padding(horizontal = 10.dp),
-                text = tittle,
-                style = MaterialTheme.typography.h6
-            )
-        }
-    }, floatingActionButton = floatingActionButton) {
+    Scaffold(
+        modifier = modifier, topBar = {
+            TopAppBar(contentColor = MaterialTheme.colors.onPrimary) {
+                topAppBar()
+            }
+        },
+        floatingActionButton = floatingActionButton
+    ) {
         content()
     }
 }

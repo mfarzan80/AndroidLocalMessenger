@@ -9,10 +9,9 @@ import kotlinx.coroutines.withContext
 import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.ResponseCode
 import net.group.androidlocalmessanger.network.client.Client
-import net.group.androidlocalmessanger.network.server.TcpServerService.Companion.PORT
+
+import net.group.androidlocalmessanger.network.server.ServerService.Companion.PORT
 import net.group.androidlocalmessanger.utils.Utils
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.net.Socket
@@ -30,11 +29,10 @@ object ClientController {
 
         return withContext(Dispatchers.IO) {
             try {
-                val socket =
-                    Socket(Utils.getServerIP(context), PORT)
-                client = Client(socket)
+                client = Client(Socket(Utils.getServerIP(context), PORT))
+
                 setStreams()
-                Log.d(TAG, "connectAndStartClient: $socket")
+                Log.d(TAG, "connectAndStartClient: ${client.socket}")
                 DataOrException(client, false, ResponseCode.OK)
 
             } catch (e: Exception) {
@@ -54,6 +52,8 @@ object ClientController {
             ClientReceiver.startReceiver()
         }
     }
+
+
 
 
 }

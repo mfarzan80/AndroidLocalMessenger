@@ -17,5 +17,4 @@ object AppModule {
         return databaseDao!!
     }
 
-
 }

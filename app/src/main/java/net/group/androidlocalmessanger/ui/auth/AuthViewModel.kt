@@ -9,10 +9,11 @@ import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.Response
 import net.group.androidlocalmessanger.module.ResponseCode
 import net.group.androidlocalmessanger.module.User
+import net.group.androidlocalmessanger.module.UserWithGroups
 import net.group.androidlocalmessanger.network.client.controller.AuthController
 
 class AuthViewModel : ViewModel() {
-    val userState: MutableState<DataOrException<User, Boolean, ResponseCode>> =
+    val userState: MutableState<DataOrException<UserWithGroups, Boolean, ResponseCode>> =
         mutableStateOf(
             DataOrException(
                 null, false, null
@@ -33,15 +34,15 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun registerResponse(response: Response<User>) {
+    fun registerResponse(response: Response<UserWithGroups>) {
         resolveResponse(response)
     }
 
-    fun loginResponse(response: Response<User>) {
+    fun loginResponse(response: Response<UserWithGroups>) {
         resolveResponse(response)
     }
 
-    fun resolveResponse(response: Response<User>) {
+    fun resolveResponse(response: Response<UserWithGroups>) {
         stopLoading()
         userState.value = userState.value.copy(info = response.code)
         userState.value = userState.value.copy(data = response.data)

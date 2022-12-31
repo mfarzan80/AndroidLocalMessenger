@@ -8,15 +8,12 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.ResponseCode
-import net.group.androidlocalmessanger.module.User
 import net.group.androidlocalmessanger.network.client.Client
 import net.group.androidlocalmessanger.network.client.controller.ClientController
-import net.group.androidlocalmessanger.network.server.TcpServerService
+import net.group.androidlocalmessanger.network.server.ServerService
 
 class ConnectViewModule : ViewModel() {
 
@@ -25,7 +22,7 @@ class ConnectViewModule : ViewModel() {
             null, false, null
         )
     )
-    val serverRunning = mutableStateOf(TcpServerService.working.get())
+    val serverRunning = mutableStateOf(ServerService.working.get())
 
     fun connectToServer(context: Context) {
         viewModelScope.launch {
@@ -43,9 +40,9 @@ class ConnectViewModule : ViewModel() {
 
     fun startServer(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(Intent(context, TcpServerService::class.java))
+            context.startForegroundService(Intent(context, ServerService::class.java))
         } else {
-            context.startService(Intent(context, TcpServerService::class.java))
+            context.startService(Intent(context, ServerService::class.java))
         }
         serverRunning.value = true
     }

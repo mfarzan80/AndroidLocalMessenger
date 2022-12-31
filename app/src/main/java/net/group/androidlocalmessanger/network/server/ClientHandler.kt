@@ -1,18 +1,17 @@
 package net.group.androidlocalmessanger.network.server
 
 import android.util.Log
-import com.google.gson.Gson
 import kotlinx.coroutines.*
 import net.group.androidlocalmessanger.module.*
 import net.group.androidlocalmessanger.network.client.Client
 import net.group.androidlocalmessanger.network.server.controller.ServerAuthController
+import net.group.androidlocalmessanger.network.server.controller.ServerGroupsController
 import net.group.androidlocalmessanger.repository.GroupRepository
 import net.group.androidlocalmessanger.repository.UserRepository
 import java.io.*
-import java.nio.ByteBuffer
 
 
-class TcpClientHandler(
+class ClientHandler(
     val userRepository: UserRepository,
     val groupRepository: GroupRepository,
     val client: Client
@@ -22,6 +21,8 @@ class TcpClientHandler(
     lateinit var output: ObjectOutputStream
     lateinit var input: ObjectInputStream
 
+    lateinit var groupsController: ServerGroupsController
+    private val socket = client.socket
 
     companion object {
         const val TAG = "TcpClientHandler"
@@ -31,20 +32,14 @@ class TcpClientHandler(
 
     suspend fun handle() {
 
-
         val authController = ServerAuthController(this)
-
-
-        val socket = client.socket
-
-        val buffer = ByteBuffer.allocate(1024)
-
+        groupsController = ServerGroupsController(this)
 
         withContext(Dispatchers.IO) {
-            try {
 
-                CoroutineScope(Dispatchers.IO).launch {
-                    withContext(Dispatchers.IO) {
+            CoroutineScope(Dispatchers.IO).launch {
+                withContext(Dispatchers.IO) {
+                    try {
                         output = ObjectOutputStream(socket.getOutputStream())
                         input = ObjectInputStream(socket.getInputStream())
 
@@ -57,54 +52,36 @@ class TcpClientHandler(
                             when (orderData.order.name) {
                                 Order.Register.name -> authController.register(orderData)
                                 Order.Login.name -> authController.login(orderData)
-                                Order.CreateGroup.name -> addGroup(orderData)
-                                Order.SendMessage.name -> sendMessage(orderData)
+                                Order.CreateGroup.name -> groupsController.addGroup(orderData)
+                                Order.SendMessage.name -> groupsController.sendMessage(orderData)
+                                Order.GetMyGroups.name -> groupsController.loadGroupsAndSend()
                                 Order.GetMessage.name -> {}
-                                Order.GetMyGroups.name -> sendUserGroups()
                                 Order.GetAllUsers.name -> sendUsers()
                             }
 
                         }
+                    } catch (e: IOException) {
+                        Log.e(TAG, "handle: ", e)
+                        try {
+                            if(client.user != null)
+                                ServerService.userToClient.remove(client.user)
+                            input.close()
+                            output.close()
+                        } catch (ex: IOException) {
+                            Log.e(TAG, "handle: ", e)
+                        }
+
                     }
+
                 }
 
-
-            } catch (e: IOException) {
-                Log.e(TAG, ": ", e)
-                try {
-
-                    output.close()
-                } catch (ex: IOException) {
-                    Log.e(TAG, ": ", e)
-                }
 
 
             }
         }
-    }
-
-
-    private suspend fun sendUserGroups() {
-        val groups = groupRepository.getAllGroups()
-
-        sendResponse(Response(ResponseCode.OK, ResponseTypes.AllGroups,
-            groups.filter {
-                if (it.users.contains(client.user))
-                    return@filter true
-                return@filter false
-            }
-        ))
-    }
-
-
-    private suspend fun sendMessage(orderData: OrderData<*>) {
 
     }
 
-    private suspend fun addGroup(orderData: OrderData<*>) {
-        val group = orderData.data!! as Group
-        groupRepository.insertGroup(group)
-    }
 
     suspend fun sendResponse(response: Response<*>) {
         withContext(Dispatchers.IO) {
@@ -119,10 +96,11 @@ class TcpClientHandler(
         sendResponse(
             Response(
                 code = ResponseCode.OK,
-                responseTypes = ResponseTypes.AllUsers,
+                responseType = ResponseType.AllUsers,
                 users
             )
         )
     }
-
 }
+
+

@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.group.androidlocalmessanger.R
 import net.group.androidlocalmessanger.di.AppModule
+import net.group.androidlocalmessanger.module.User
 import net.group.androidlocalmessanger.network.client.Client
 import net.group.androidlocalmessanger.repository.GroupRepository
 import net.group.androidlocalmessanger.repository.UserRepository
@@ -26,14 +27,14 @@ import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 
 
-class TcpServerService : Service() {
+class ServerService : Service() {
 
     companion object {
         const val TAG = "TcpServerService"
         const val PORT = 9876
         const val HOST = "192.168.43.1"
         val working = AtomicBoolean(false)
-        val clients = ArrayList<Client>()
+        val userToClient = HashMap<User, ClientHandler>()
     }
 
     lateinit var userRepository: UserRepository
@@ -66,11 +67,11 @@ class TcpServerService : Service() {
                 while (working.get()) {
 
                     socket = server.accept()
-                    val client = Client(socket!!)
-                    val tcpClientHandler =
-                        TcpClientHandler(userRepository, groupRepository, client)
-                    tcpClientHandler.handle()
-                    clients.add(client)
+
+                    val clientHandler =
+                        ClientHandler(userRepository, groupRepository, Client(socket!!))
+                    clientHandler.handle()
+
                     Log.i(TAG, "New client: $socket")
 
                 }

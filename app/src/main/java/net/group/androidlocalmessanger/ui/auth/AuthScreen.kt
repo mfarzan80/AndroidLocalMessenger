@@ -35,6 +35,7 @@ fun AuthScreen(navController: NavController, authViewModel: AuthViewModel) {
         Column(modifier = Modifier.padding(30.dp)) {
             if (!login.value) {
                 OutlinedInput(
+                    modifier = Modifier.fillMaxWidth(),
                     valueState = name,
                     label = "Name"
                 )
@@ -42,6 +43,7 @@ fun AuthScreen(navController: NavController, authViewModel: AuthViewModel) {
             }
 
             OutlinedInput(
+                modifier = Modifier.fillMaxWidth(),
                 valueState = email,
                 label = "Email"
             )
@@ -49,6 +51,7 @@ fun AuthScreen(navController: NavController, authViewModel: AuthViewModel) {
             VSpacer()
 
             OutlinedInput(
+                modifier = Modifier.fillMaxWidth(),
                 valueState = password,
                 label = "Password",
             )

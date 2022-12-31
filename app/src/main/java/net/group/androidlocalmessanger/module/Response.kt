@@ -4,7 +4,7 @@ import java.io.Serializable
 
 data class Response<T>(
     val code: ResponseCode? = null,
-    val responseTypes: ResponseTypes? = null,
+    val responseType: ResponseType? = null,
     val data: T? = null
 
 

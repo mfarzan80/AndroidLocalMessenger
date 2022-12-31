@@ -8,16 +8,18 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.gson.Gson
 import net.group.androidlocalmessanger.module.Group
+import net.group.androidlocalmessanger.module.GroupWithUsers
 import net.group.androidlocalmessanger.network.client.controller.AuthController
 import net.group.androidlocalmessanger.network.client.controller.MainController
+import net.group.androidlocalmessanger.network.client.controller.MainController.groupIdToChatViewModel
 import net.group.androidlocalmessanger.ui.AddConversationScreen
-import net.group.androidlocalmessanger.ui.ChatScreen
+import net.group.androidlocalmessanger.ui.chat.ChatScreen
 import net.group.androidlocalmessanger.ui.auth.AuthScreen
-import net.group.androidlocalmessanger.ui.auth.AuthViewModel
 import net.group.androidlocalmessanger.ui.chat.ChatViewModel
 import net.group.androidlocalmessanger.ui.connect.ConnectScreen
 import net.group.androidlocalmessanger.ui.connect.ConnectViewModule
 import net.group.androidlocalmessanger.ui.main.MainScreen
+import net.group.androidlocalmessanger.utils.ListTypeConverters.Companion.gson
 
 @Composable
 fun MainNavigation() {
@@ -25,8 +27,8 @@ fun MainNavigation() {
     val connectViewModule = ConnectViewModule()
     val authViewModel = AuthController.authViewModel
     val mainViewModule = MainController.mainViewModule
-    val groupIdToChatViewModel = mapOf<String, ChatViewModel>()
-    val gson = Gson()
+
+
     NavHost(
         navController = navController,
         startDestination = Screen.ConnectScreen.name
@@ -54,14 +56,19 @@ fun MainNavigation() {
                 type = NavType.StringType
             }
         )) {
-            val group = gson.fromJson(it.arguments!!["group"] as String, Group::class.java)
+            val group = gson.fromJson(it.arguments!!["group"] as String, GroupWithUsers::class.java)
             var chatViewModel =
-                groupIdToChatViewModel[group.id]
-            if (chatViewModel == null)
+                groupIdToChatViewModel[group.group.groupId]
+            if (chatViewModel == null) {
                 chatViewModel = ChatViewModel(group)
+                groupIdToChatViewModel[group.group.groupId] = chatViewModel
+            }
             ChatScreen(navController, chatViewModel)
         }
 
+        composable(route = Screen.SettingScreen.name) {
+
+        }
 
     }
 }

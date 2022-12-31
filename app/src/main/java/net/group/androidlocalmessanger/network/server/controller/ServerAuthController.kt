@@ -2,26 +2,27 @@ package net.group.androidlocalmessanger.network.server.controller
 
 import android.util.Log
 import net.group.androidlocalmessanger.module.*
-import net.group.androidlocalmessanger.network.server.TcpClientHandler
-import net.group.androidlocalmessanger.network.server.TcpClientHandler.Companion.TAG
+import net.group.androidlocalmessanger.network.server.ClientHandler
+import net.group.androidlocalmessanger.network.server.ClientHandler.Companion.TAG
+import net.group.androidlocalmessanger.network.server.ServerService
 
-class ServerAuthController(private val tcpClientHandler: TcpClientHandler) {
+class ServerAuthController(private val clientHandler: ClientHandler) {
 
 
     suspend fun login(orderData: OrderData<*>) {
 
         val requestUser = orderData.data!! as User
-        val serverUser =
-            tcpClientHandler.userRepository.getUserByUsername(userName = requestUser.email)
+        val userWithGroups =
+            clientHandler.userRepository.getUserByUsername(userName = requestUser.userEmail)
 
-        tcpClientHandler.sendResponse(
-            if (serverUser == null)
-                Response(ResponseCode.USER_NAME_NOT_FOUND, ResponseTypes.Login)
-            else if (serverUser.password != requestUser.password)
-                Response(ResponseCode.PASSWORD_INCORRECT, ResponseTypes.Login)
+        clientHandler.sendResponse(
+            if (userWithGroups == null)
+                Response(ResponseCode.USER_NAME_NOT_FOUND, ResponseType.Login)
+            else if (userWithGroups.user.password != requestUser.password)
+                Response(ResponseCode.PASSWORD_INCORRECT, ResponseType.Login)
             else {
-                tcpClientHandler.client.user = serverUser
-                Response<User?>(ResponseCode.OK, ResponseTypes.Login, serverUser)
+                setClientUser(user = userWithGroups.user)
+                Response<UserWithGroups?>(ResponseCode.OK, ResponseType.Login, userWithGroups)
             }
         )
 
@@ -32,27 +33,32 @@ class ServerAuthController(private val tcpClientHandler: TcpClientHandler) {
 
         val user = orderData.data!! as User
         Log.d(TAG, "register: $user")
-        val userExist =
-            tcpClientHandler.userRepository.getUserByUsername(userName = user.email) != null
+        val userWithGroups =
+            clientHandler.userRepository.getUserByUsername(userName = user.userEmail)
         val response =
-            if (!userExist)
+            if (userWithGroups == null)
                 Response(
-                    ResponseCode.OK, ResponseTypes.Register, user
+                    ResponseCode.OK, ResponseType.Register, UserWithGroups(user, listOf())
                 )
             else
                 Response(
-                    ResponseCode.USER_EXIST, ResponseTypes.Register, null
+                    ResponseCode.USER_EXIST, ResponseType.Register, null
                 )
 
 
-        tcpClientHandler.sendResponse(response)
+        clientHandler.sendResponse(response)
 
         if (response.code == ResponseCode.OK) {
-            tcpClientHandler.client.user = user
-            tcpClientHandler.userRepository.insertUser(user)
+            setClientUser(user)
+            clientHandler.userRepository.insertUser(user)
             Log.d(TAG, "register:insertUser $user")
         }
 
+    }
+
+    private fun setClientUser(user: User) {
+        clientHandler.client.user = user
+        ServerService.userToClient[user] = clientHandler
     }
 
 }
