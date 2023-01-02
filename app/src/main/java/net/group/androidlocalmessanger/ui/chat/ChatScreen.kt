@@ -24,6 +24,7 @@ import net.group.androidlocalmessanger.module.Message
 import net.group.androidlocalmessanger.ui.component.ActivityView
 import net.group.androidlocalmessanger.ui.component.HSpacer
 import net.group.androidlocalmessanger.ui.component.VSpacer
+import net.group.androidlocalmessanger.ui.main.GroupProfile
 
 @Composable
 fun ChatScreen(navController: NavController, chatViewModel: ChatViewModel) {
@@ -34,11 +35,7 @@ fun ChatScreen(navController: NavController, chatViewModel: ChatViewModel) {
     Log.d("Screen", "ChatScreen: " + chatViewModel.messages)
     ActivityView(
         topAppBar = {
-            Image(
-                modifier = Modifier.size(50.dp),
-                imageVector = Icons.Default.AccountCircle,
-                contentDescription = "profile"
-            )
+            GroupProfile(chatViewModel.groupWithUsers)
             Text(
                 modifier = Modifier.padding(horizontal = 10.dp),
                 text = chatViewModel.groupWithUsers.getGroupName(chatViewModel.getUser()),

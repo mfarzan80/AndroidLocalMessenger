@@ -12,8 +12,8 @@ import net.group.androidlocalmessanger.network.client.Client
 
 import net.group.androidlocalmessanger.network.server.ServerService.Companion.PORT
 import net.group.androidlocalmessanger.utils.Utils
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
+import net.group.androidlocalmessanger.utils.Utils.sendFile
+import java.io.*
 import java.net.Socket
 
 object ClientController {
@@ -31,7 +31,7 @@ object ClientController {
             try {
                 client = Client(Socket(Utils.getServerIP(context), PORT))
 
-                setStreams()
+                setStreams(context)
                 Log.d(TAG, "connectAndStartClient: ${client.socket}")
                 DataOrException(client, false, ResponseCode.OK)
 
@@ -43,17 +43,15 @@ object ClientController {
 
     }
 
-    private fun setStreams() {
+    private fun setStreams(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             withContext(Dispatchers.IO) {
                 input = ObjectInputStream(client.socket.getInputStream())
                 output = ObjectOutputStream(client.socket.getOutputStream())
             }
-            ClientReceiver.startReceiver()
+            ClientReceiver.startReceiver(context)
         }
     }
-
-
 
 
 }

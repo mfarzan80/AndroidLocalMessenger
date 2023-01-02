@@ -14,16 +14,21 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import net.group.androidlocalmessanger.network.client.controller.MainController
+import net.group.androidlocalmessanger.module.Group
+import net.group.androidlocalmessanger.module.GroupWithUsers
+import net.group.androidlocalmessanger.ui.ProfileImage
+import net.group.androidlocalmessanger.ui.UserProfile
 import net.group.androidlocalmessanger.ui.component.ActivityView
 import net.group.androidlocalmessanger.ui.component.GroupIcon
 import net.group.androidlocalmessanger.ui.component.HSpacer
+import net.group.androidlocalmessanger.ui.main.MainViewModule.Companion.getUser
 import net.group.androidlocalmessanger.ui.navigation.Screen
 import net.group.androidlocalmessanger.ui.theme.AndroidLocalMessangerTheme
 import net.group.androidlocalmessanger.utils.ListTypeConverters.Companion.gson
@@ -31,7 +36,8 @@ import net.group.androidlocalmessanger.utils.ListTypeConverters.Companion.gson
 @Composable
 fun MainScreen(navController: NavController, mainViewModule: MainViewModule) {
     LaunchedEffect(key1 = true) {
-        MainController.sendGroupsRequest()
+        mainViewModule.sendUsersRequest()
+        mainViewModule.sendGroupsRequest()
     }
     val groups = mainViewModule.groups
     ActivityView(floatingActionButton = {
@@ -45,7 +51,7 @@ fun MainScreen(navController: NavController, mainViewModule: MainViewModule) {
             )
         }
     }, topAppBar = {
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
                 text = "Android Local Messenger",
@@ -71,16 +77,17 @@ fun MainScreen(navController: NavController, mainViewModule: MainViewModule) {
                         .clickable {
                             navController.navigate(
                                 Screen.ChatScreen.name + "/${
-                                    gson.toJson(group)
+                                    group.group.groupId
                                 }"
                             )
                         }
                 ) {
-                    GroupIcon()
+
+                    GroupProfile(group)
                     HSpacer(10.dp)
                     Column {
                         Text(
-                            text = group.getGroupName(mainViewModule.getUser()),
+                            text = group.getGroupName(getUser()),
                             style = MaterialTheme.typography.button
                         )
 
@@ -98,6 +105,15 @@ fun MainScreen(navController: NavController, mainViewModule: MainViewModule) {
 
     }
 
+}
+
+@Composable
+fun GroupProfile(group: GroupWithUsers) {
+    if (group.group.type == Group.GROUP_TYPE_CHAT) {
+        UserProfile(group.getContact(getUser()))
+    } else {
+        GroupIcon()
+    }
 }
 
 @Preview(showBackground = true)

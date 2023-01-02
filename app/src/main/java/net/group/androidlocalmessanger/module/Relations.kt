@@ -18,7 +18,7 @@ data class UserWithGroups(
     )
     var groups: List<Group>
 
-) : java.io.Serializable{
+) : java.io.Serializable {
 
 }
 
@@ -35,13 +35,18 @@ data class GroupWithUsers(
 ) : java.io.Serializable {
 
 
-    fun getGroupName(user: User): String {
+    fun getGroupName(me: User): String {
         if (group.type == Group.GROUP_TYPE_CHAT) {
-            users.forEach {
-                if (it != user)
-                    return it.name
-            }
+            return getContact(me).name
         }
         return group.name
+    }
+
+    fun getContact(me: User): User {
+        users.forEach {
+            if (it != me)
+                return it
+        }
+        return me
     }
 }

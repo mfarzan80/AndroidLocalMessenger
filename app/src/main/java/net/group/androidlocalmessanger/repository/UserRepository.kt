@@ -6,7 +6,11 @@ import net.group.androidlocalmessanger.module.UserWithGroups
 
 class UserRepository(private val databaseDao: DatabaseDao) {
 
-    suspend fun getUserByUsername(userName: String): UserWithGroups? {
+    suspend fun getUserByEmail(email: String): UserWithGroups? {
+        return databaseDao.getUserByEmail(email)
+    }
+
+    suspend fun getUserByUsername(userName: String): User? {
         return databaseDao.getUserByUsername(userName)
     }
 
@@ -15,8 +19,11 @@ class UserRepository(private val databaseDao: DatabaseDao) {
     }
 
     suspend fun insertUser(user: User) {
-
         databaseDao.insertUser(user)
+    }
+
+    suspend fun updateUser(updatedUser: User) {
+        databaseDao.updateUser(updatedUser)
     }
 
 }

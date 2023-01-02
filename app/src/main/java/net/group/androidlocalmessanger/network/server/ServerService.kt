@@ -69,7 +69,12 @@ class ServerService : Service() {
                     socket = server.accept()
 
                     val clientHandler =
-                        ClientHandler(userRepository, groupRepository, Client(socket!!))
+                        ClientHandler(
+                            this@ServerService,
+                            userRepository,
+                            groupRepository,
+                            Client(socket!!)
+                        )
                     clientHandler.handle()
 
                     Log.i(TAG, "New client: $socket")

@@ -22,7 +22,6 @@ class ChatViewModel(val groupWithUsers: GroupWithUsers) : ViewModel() {
     fun sendMessage(message: Message) {
         messages.add(message)
         viewModelScope.launch {
-
             MainController.sendMessage(message)
         }
     }

@@ -22,8 +22,8 @@ import net.group.androidlocalmessanger.ui.component.VSpacer
 import net.group.androidlocalmessanger.ui.navigation.Screen
 
 @Composable
-fun AuthScreen(navController: NavController, authViewModel: AuthViewModel) {
-    val user = authViewModel.userState.value
+fun AuthScreen(navController: NavController, userViewModel: UserViewModel) {
+    val user = userViewModel.userState.value
     val login = remember { mutableStateOf(false) }
     val name = remember { mutableStateOf("") }
     val email = remember { mutableStateOf("") }
@@ -59,7 +59,7 @@ fun AuthScreen(navController: NavController, authViewModel: AuthViewModel) {
             VSpacer(20.dp)
 
             Button(modifier = Modifier.fillMaxWidth(), onClick = {
-                authViewModel.auth(
+                userViewModel.auth(
                     User(name = name.value, email = email.value, password = password.value),
                     login.value
                 )

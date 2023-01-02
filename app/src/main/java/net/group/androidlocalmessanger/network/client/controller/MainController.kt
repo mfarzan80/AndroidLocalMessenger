@@ -1,9 +1,11 @@
 package net.group.androidlocalmessanger.network.client.controller
 
+import android.content.Context
 import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.*
 import net.group.androidlocalmessanger.ui.chat.ChatViewModel
 import net.group.androidlocalmessanger.ui.main.MainViewModule
+import net.group.androidlocalmessanger.utils.Catcher
 
 object MainController {
     val groupIdToChatViewModel: HashMap<String, ChatViewModel> = hashMapOf()
@@ -30,8 +32,23 @@ object MainController {
         mainViewModule.setGroups(groups)
     }
 
-    fun refreshUsers(response: Response<*>) {
+    fun refreshUsers(context: Context, response: Response<*>) {
+        val catcher = Catcher(context)
         val users = response.data as List<User>
+        users.forEach { user ->
+            if (user.profilePath != null) {
+                if (catcher.getLocalPathByServerPath(user.profilePath) == null) {
+                    val profileFile =
+                        ClientReceiver.receiveFile(
+                            context,
+                            user.userEmail + "_ProfilePhoto" + System.nanoTime() + ".jpg"
+                        )
+
+                    catcher.saveLocalPath(user.profilePath, profileFile.path)
+
+                }
+            }
+        }
         val de = DataOrException(users, false, response.code)
         mainViewModule.setUsers(de)
     }

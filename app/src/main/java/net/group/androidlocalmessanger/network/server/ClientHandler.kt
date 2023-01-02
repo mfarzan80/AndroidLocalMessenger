@@ -1,27 +1,37 @@
 package net.group.androidlocalmessanger.network.server
 
+import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.group.androidlocalmessanger.module.*
 import net.group.androidlocalmessanger.network.client.Client
-import net.group.androidlocalmessanger.network.server.controller.ServerAuthController
 import net.group.androidlocalmessanger.network.server.controller.ServerGroupsController
+import net.group.androidlocalmessanger.network.server.controller.ServerUserController
 import net.group.androidlocalmessanger.repository.GroupRepository
 import net.group.androidlocalmessanger.repository.UserRepository
-import java.io.*
+import net.group.androidlocalmessanger.utils.Utils
+import java.io.File
+import java.io.IOException
+import java.io.InputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.OutputStream
 
 
 class ClientHandler(
+    val context: Context,
     val userRepository: UserRepository,
     val groupRepository: GroupRepository,
     val client: Client
 ) {
 
-
     lateinit var output: ObjectOutputStream
     lateinit var input: ObjectInputStream
-
     lateinit var groupsController: ServerGroupsController
+
     private val socket = client.socket
 
     companion object {
@@ -32,7 +42,7 @@ class ClientHandler(
 
     suspend fun handle() {
 
-        val authController = ServerAuthController(this)
+        val userController = ServerUserController(this)
         groupsController = ServerGroupsController(this)
 
         withContext(Dispatchers.IO) {
@@ -49,21 +59,22 @@ class ClientHandler(
                             val orderData = input.readObject() as OrderData<*>
                             Log.d(TAG, "handle: reading...  $orderData")
 
-                            when (orderData.order.name) {
-                                Order.Register.name -> authController.register(orderData)
-                                Order.Login.name -> authController.login(orderData)
-                                Order.CreateGroup.name -> groupsController.addGroup(orderData)
-                                Order.SendMessage.name -> groupsController.sendMessage(orderData)
-                                Order.GetMyGroups.name -> groupsController.loadGroupsAndSend()
-                                Order.GetMessage.name -> {}
-                                Order.GetAllUsers.name -> sendUsers()
+                            when (orderData.order) {
+                                Order.Register -> userController.register(orderData)
+                                Order.Login -> userController.login(orderData)
+                                Order.UpdateUser -> userController.updateUser(orderData)
+                                Order.UpdateProfile -> userController.updateUserProfile(orderData)
+                                Order.CreateGroup -> groupsController.addGroup(orderData)
+                                Order.SendMessage -> groupsController.sendMessage(orderData)
+                                Order.GetMyGroups -> groupsController.loadGroupsAndSend()
+                                Order.GetAllUsers -> userController.sendUsers()
                             }
 
                         }
                     } catch (e: IOException) {
                         Log.e(TAG, "handle: ", e)
                         try {
-                            if(client.user != null)
+                            if (client.user != null)
                                 ServerService.userToClient.remove(client.user)
                             input.close()
                             output.close()
@@ -74,7 +85,6 @@ class ClientHandler(
                     }
 
                 }
-
 
 
             }
@@ -91,16 +101,25 @@ class ClientHandler(
         }
     }
 
-    suspend fun sendUsers() {
-        val users = userRepository.getAllUsers()
-        sendResponse(
-            Response(
-                code = ResponseCode.OK,
-                responseType = ResponseType.AllUsers,
-                users
-            )
-        )
+
+    fun receiveFile(fileName: String): File {
+        val receivedFile =
+            File(Utils.getCashFolder(context).absolutePath + File.separator + fileName)
+        receivedFile.createNewFile()
+        Log.d(TAG, "receiveFile start: " + receivedFile.path)
+        Utils.receiveFile(receivedFile, input)
+        Log.d(TAG, "receiveFile Finish: " + receivedFile.path)
+        Utils.saveToDownload(context, receivedFile)
+        return receivedFile
     }
+
+    suspend fun sendFile(filePath: String) {
+        withContext(Dispatchers.IO) {
+            Utils.sendFile(File(filePath), output)
+        }
+    }
+
+
 }
 
 

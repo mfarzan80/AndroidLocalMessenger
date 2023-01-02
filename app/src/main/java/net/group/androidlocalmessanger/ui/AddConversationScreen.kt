@@ -1,45 +1,51 @@
 package net.group.androidlocalmessanger.ui
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import net.group.androidlocalmessanger.module.Group
 import net.group.androidlocalmessanger.module.GroupWithUsers
 import net.group.androidlocalmessanger.module.User
+import net.group.androidlocalmessanger.network.client.controller.ClientController
 import net.group.androidlocalmessanger.ui.component.ActivityView
 import net.group.androidlocalmessanger.ui.component.GroupIcon
 import net.group.androidlocalmessanger.ui.component.HSpacer
 import net.group.androidlocalmessanger.ui.component.OutlinedInput
 import net.group.androidlocalmessanger.ui.main.MainViewModule
+import net.group.androidlocalmessanger.ui.main.MainViewModule.Companion.checkProfile
 import net.group.androidlocalmessanger.ui.navigation.Screen
+import net.group.androidlocalmessanger.utils.Catcher
 import net.group.androidlocalmessanger.utils.ListTypeConverters.Companion.gson
+import java.io.File
 
 @Composable
 fun AddConversationScreen(navController: NavController, mainViewModule: MainViewModule) {
-
+    val users = mainViewModule.users.value.data!!
     val groupType = remember { mutableStateOf(Group.GROUP_TYPE_CHAT) }
     if (groupType.value != Group.GROUP_TYPE_CHAT && mainViewModule.users.value.data != null)
-        UsersDialog(groupType, mainViewModule.users.value.data!!, onConfirm = {
+        UsersDialog(groupType, users, onConfirm = {
             mainViewModule.addGroup(it)
             navController.popBackStack()
         })
 
-    LaunchedEffect(key1 = true) {
-        mainViewModule.sendUsersRequest()
-    }
 
     Log.d("Screen", "AddConversationScreen: ")
     ActivityView(tittle = "Add Conversation") {
@@ -49,14 +55,14 @@ fun AddConversationScreen(navController: NavController, mainViewModule: MainView
             val rowModifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)
             Column {
                 Row(modifier = rowModifier) {
-                    TextButton(onClick = {
+                    TextButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         groupType.value = Group.GROUP_TYPE_GROUP
                     }) {
                         Text("New Group")
                     }
                 }
                 Row(modifier = rowModifier) {
-                    TextButton(onClick = {
+                    TextButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         groupType.value = Group.GROUP_TYPE_CHANNEL
                     }) {
                         Text("New Channel")
@@ -64,15 +70,11 @@ fun AddConversationScreen(navController: NavController, mainViewModule: MainView
                 }
                 UsersLazyColomn(
                     rowModifier = rowModifier,
-                    users = mainViewModule.users.value.data!!,
+                    users = users,
                 )
                 {
                     navController.popBackStack()
-                    navController.navigate(
-                        Screen.ChatScreen.name + "/${
-                            gson.toJson(mainViewModule.getPvGroup(it))
-                        }"
-                    )
+                    mainViewModule.getPvGroup(it)
                 }
             }
         }
@@ -100,6 +102,7 @@ fun UsersDialog(
                 OutlinedInput(modifier = rowModifier, valueState = name, label = "Name")
                 LazyColumn {
                     items(users) { user ->
+                        //  if (user == ClientController.client.user) return@items
                         Row(
                             modifier = rowModifier.background(
                                 color = if (!selectedUsers.contains(user))
@@ -117,7 +120,6 @@ fun UsersDialog(
                             HSpacer(10.dp)
                             Text(text = user.name, style = MaterialTheme.typography.button)
                         }
-
                     }
                 }
 
@@ -156,11 +158,41 @@ fun UsersLazyColomn(
                     .clickable {
                         rowClick(user)
                     }) {
-                GroupIcon()
+                UserProfile(user)
                 HSpacer(10.dp)
                 Text(text = user.name, style = MaterialTheme.typography.button)
             }
 
+        }
+    }
+}
+
+@Composable
+fun UserProfile(user: User) {
+    val catcher = Catcher(LocalContext.current)
+    val imageModifier = Modifier.size(50.dp)
+    val hasProfile = user.profilePath != null
+    Log.d("Screen", "ProfileImage:ServerPath: ${user.profilePath}")
+    Card(shape = CircleShape, elevation = 0.dp) {
+        val path = catcher.getLocalPathByServerPath(user.profilePath)
+        Log.d("Screen", "ProfileImage:LocalPath: $path")
+        if (hasProfile && path != null) {
+            Image(
+                painter = rememberAsyncImagePainter(
+                    ImageRequest.Builder(LocalContext.current)
+                        .data(path)
+                        .build()
+                ),
+                contentDescription = "ProfilePhoto",
+                contentScale = ContentScale.Crop,
+                modifier = imageModifier
+            )
+        } else {
+            Image(
+                modifier = imageModifier,
+                imageVector = Icons.Filled.AccountCircle,
+                contentDescription = "ProfilePhoto"
+            )
         }
     }
 }

@@ -4,10 +4,13 @@ import static android.content.Context.DOWNLOAD_SERVICE;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.database.Cursor;
 import android.net.DhcpInfo;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.text.format.Formatter;
 import android.util.Log;
 
@@ -16,7 +19,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 
 public class Utils {
@@ -31,26 +37,34 @@ public class Utils {
         return Formatter.formatIpAddress(dhcp.gateway);
     }
 
-    public static void sendFile(File file, OutputStream outputStream) throws IOException {
-        byte[] bytes = new byte[16 * 1024];
+    public static void sendFile(File file, ObjectOutputStream outputStream) throws IOException {
+        byte[] bytes = new byte[1024];
+        outputStream.writeLong(file.length());
         InputStream in = new FileInputStream(file);
-        int count;
-        while ((count = in.read(bytes)) > 0) {
+        Log.d(TAG, "sendFile:Start " + file.length());
+        int count = in.read(bytes);
+        while (count != -1) {
             outputStream.write(bytes, 0, count);
+            count = in.read(bytes);
         }
+        Log.d(TAG, "sendFile: End" + file.length());
         outputStream.flush();
         in.close();
     }
 
-    public static void receiveFile(File file, InputStream inputStream) throws IOException {
-        byte[] bytes = new byte[16 * 1024];
+    public static void receiveFile(File file, ObjectInputStream inputStream) throws IOException {
+        byte[] bytes = new byte[1024];
         FileOutputStream outputStream = new FileOutputStream(file);
-        Log.d(TAG, "receiveFile: inputStream.read...");
-        int count;
-        count = inputStream.read(bytes);
-        outputStream.write(bytes, 0, count);
-        Log.d(TAG, "receiveFile: FINISH");
+        long length = inputStream.readLong();
+        Log.d(TAG, "receiveFile: inputStream.read..." + length);
+        do {
+            int count = inputStream.read(bytes);
+            outputStream.write(bytes, 0, count);
+            length -= count;
+        } while (length > 0);
+        Log.d(TAG, "receiveFile: FINISH  " + file.length());
 
+        outputStream.flush();
         outputStream.close();
     }
 
@@ -83,5 +97,17 @@ public class Utils {
         DownloadManager downloadManager = (DownloadManager) context.getSystemService(DOWNLOAD_SERVICE);
         downloadManager.addCompletedDownload(file.getName(), file.getName(), true,
                 "text/plain", file.getAbsolutePath(), file.length(), true);
+    }
+
+    public static String getPath(String path, Context context) {
+        Uri uri = Uri.parse(path);
+        String[] projection = {MediaStore.Images.Media.DATA};
+        Cursor cursor = context.getContentResolver().query(uri, projection, null, null, null);
+        if (cursor == null) return null;
+        int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+        cursor.moveToFirst();
+        String s = cursor.getString(column_index);
+        cursor.close();
+        return s;
     }
 }

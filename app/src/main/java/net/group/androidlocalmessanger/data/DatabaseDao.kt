@@ -20,13 +20,19 @@ interface DatabaseDao {
     @Update(entity = Group::class)
     suspend fun updateGroup(group: Group)
 
+    @Update(entity = User::class)
+    suspend fun updateUser(updatedUser: User)
 
     @Query("SELECT * FROM users")
     suspend fun getAllUsers(): List<User>
 
+
     @Transaction
-    @Query("SELECT * FROM users WHERE userEmail == :userName")
-    suspend fun getUserByUsername(userName: String): UserWithGroups?
+    @Query("SELECT * FROM users WHERE userEmail == :email")
+    suspend fun getUserByEmail(email: String): UserWithGroups?
+
+    @Query("SELECT * FROM users WHERE userName == :userName")
+    suspend fun getUserByUsername(userName: String): User?
 
     @Transaction
     @Query("SELECT * FROM groups WHERE :id == groupId")

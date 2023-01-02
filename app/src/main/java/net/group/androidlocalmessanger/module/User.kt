@@ -11,11 +11,10 @@ data class User(@PrimaryKey var userEmail: String, val password: String) : Seria
     lateinit var name: String
     var profilePath: String? = null
     var phoneNumber: String? = null
-    var id: String? = null
+    var userName: String? = null
 
     var showPhoneNumber: Boolean = false
     var showProfile: Boolean = true
-    var showEmail: Boolean = true
 
     constructor(email: String, password: String, name: String) : this(email, password) {
         this.name = name
@@ -29,9 +28,10 @@ data class User(@PrimaryKey var userEmail: String, val password: String) : Seria
             false
     }
 
+
     override fun hashCode(): Int {
         var result = userEmail.hashCode()
-        result = 31 * result + (id?.hashCode() ?: 0)
+        result = 31 * result + (userName?.hashCode() ?: 0)
         return result
     }
 }

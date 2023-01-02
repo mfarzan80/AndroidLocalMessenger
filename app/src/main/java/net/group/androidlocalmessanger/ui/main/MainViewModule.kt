@@ -3,6 +3,7 @@ package net.group.androidlocalmessanger.ui.main
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -10,15 +11,18 @@ import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.*
 import net.group.androidlocalmessanger.network.client.controller.ClientController
 import net.group.androidlocalmessanger.network.client.controller.MainController
+import net.group.androidlocalmessanger.network.client.controller.UserController
+import java.io.File
 
 class MainViewModule : ViewModel() {
 
     val groups = mutableStateMapOf<String, GroupWithUsers>()
     val groupLoading = mutableStateOf(false)
 
-    val users: MutableState<DataOrException<List<User>, Boolean, ResponseCode>> = mutableStateOf(
-        DataOrException(listOf(), false, null)
-    )
+    val users: MutableState<DataOrException<List<User>, Boolean, ResponseCode>> =
+        mutableStateOf(
+            DataOrException(listOf(), false, null)
+        )
 
     fun sendGroupsRequest() {
         viewModelScope.launch {
@@ -29,7 +33,7 @@ class MainViewModule : ViewModel() {
 
     fun sendUsersRequest() {
         viewModelScope.launch {
-            usersLoading()
+            startUsersLoading()
             MainController.sendUsersRequest()
         }
 
@@ -56,11 +60,19 @@ class MainViewModule : ViewModel() {
     }
 
     fun setUsers(dataOrException: DataOrException<List<User>, Boolean, ResponseCode>) {
-        users.value = dataOrException
+
+            users.value = dataOrException
+
     }
 
-    private fun usersLoading() {
+
+
+    private fun startUsersLoading() {
         users.value = users.value.copy(loading = true)
+    }
+
+    private fun stopUsersLoading() {
+        users.value = users.value.copy(loading = false)
     }
 
     private fun groupsLoading() {
@@ -89,10 +101,20 @@ class MainViewModule : ViewModel() {
     }
 
 
-    fun getUser(): User {
-        return ClientController.client.user!!
+    companion object {
+        fun getUser(): User {
+            return ClientController.client.user!!
+        }
+
+        fun checkProfile(user: User): Boolean {
+            return user.profilePath != null && File(user.profilePath!!).exists()
+        }
+
+        fun needToDownloadProfile(user: User): Boolean {
+            return user.profilePath != null && !File(user.profilePath!!).exists()
+        }
+
+
     }
-    fun isOwnerUser(message: Message): Boolean {
-        return getUser() == message.sender
-    }
+
 }

@@ -26,8 +26,8 @@ class ServerGroupsController(private val clientHandler: ClientHandler) {
     private suspend fun sendAGroupToItsUsers(group: GroupWithUsers) {
         group.users.forEach {
             val client = ServerService.userToClient[it]
-            if (client != clientHandler)
-                sendAGroup(group)
+            if (client != null && client != clientHandler)
+                client.groupsController.sendAGroup(group)
         }
     }
 
@@ -35,7 +35,7 @@ class ServerGroupsController(private val clientHandler: ClientHandler) {
         clientHandler.sendResponse(
             Response(
                 code = ResponseCode.OK,
-                responseType = ResponseType.UpdateGroup,
+                responseType = ResponseType.UpdatedGroup,
                 data = group
             )
         )
