@@ -7,11 +7,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import net.group.androidlocalmessanger.module.GroupWithUsers
+import net.group.androidlocalmessanger.module.User
 import net.group.androidlocalmessanger.network.client.controller.UserController
 import net.group.androidlocalmessanger.network.client.controller.MainController
 import net.group.androidlocalmessanger.network.client.controller.MainController.groupIdToChatViewModel
 import net.group.androidlocalmessanger.ui.AddConversationScreen
+import net.group.androidlocalmessanger.ui.GroupScreen
 import net.group.androidlocalmessanger.ui.SettingScreen
+import net.group.androidlocalmessanger.ui.UserScreen
 import net.group.androidlocalmessanger.ui.chat.ChatScreen
 import net.group.androidlocalmessanger.ui.auth.AuthScreen
 import net.group.androidlocalmessanger.ui.chat.ChatViewModel
@@ -66,8 +69,39 @@ fun MainNavigation() {
             ChatScreen(navController, chatViewModel)
         }
 
+        composable(route = Screen.GroupDetailScreen.name + "/{groupId}", arguments = listOf(
+            navArgument(name = "groupId") {
+                type = NavType.StringType
+            }
+        )) {
+            val groupId = it.arguments!!["groupId"] as String
+            var chatViewModel =
+                groupIdToChatViewModel[groupId]
+            if (chatViewModel == null) {
+                val group = mainViewModule.groups[groupId]
+                chatViewModel = ChatViewModel(group!!)
+            }
+            GroupScreen(navController, mainViewModule, chatViewModel!!)
+        }
+
         composable(route = Screen.SettingScreen.name) {
             SettingScreen(navController, userViewModel)
+        }
+
+        composable(route = Screen.UserDetailScreen.name + "/{userEmail}", arguments = listOf(
+            navArgument(name = "userEmail") {
+                type = NavType.StringType
+            }
+        )) {
+            val userEmail = it.arguments!!["userEmail"] as String
+            var user: User? = null
+            mainViewModule.users.value.data!!.forEach {
+                if (it.userEmail == userEmail) {
+                    user = it
+                    return@forEach
+                }
+            }
+            UserScreen(navController, user!!)
         }
 
     }

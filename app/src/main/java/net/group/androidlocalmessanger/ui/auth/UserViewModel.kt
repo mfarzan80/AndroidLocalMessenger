@@ -1,7 +1,9 @@
 package net.group.androidlocalmessanger.ui.auth
 
+import android.content.Context
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -45,10 +47,10 @@ class UserViewModel : ViewModel() {
         }
     }
 
-    fun updateUser(user: User) {
+    fun updateUser(context: Context, user: User) {
         viewModelScope.launch {
             startLoading(true)
-            UserController.sendUpdateUserRequest(user)
+            UserController.sendUpdateUserRequest(context,user)
         }
     }
 
@@ -101,8 +103,6 @@ class UserViewModel : ViewModel() {
         else
             register(user)
     }
-
-
 
 
 }

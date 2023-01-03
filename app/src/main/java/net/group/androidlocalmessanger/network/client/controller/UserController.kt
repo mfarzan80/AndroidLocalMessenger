@@ -1,6 +1,7 @@
 package net.group.androidlocalmessanger.network.client.controller
 
 import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -9,6 +10,7 @@ import net.group.androidlocalmessanger.module.*
 import net.group.androidlocalmessanger.network.client.controller.Sender.sendRequest
 import net.group.androidlocalmessanger.network.client.controller.Sender.uploadFile
 import net.group.androidlocalmessanger.ui.auth.UserViewModel
+import net.group.androidlocalmessanger.utils.Utils.getFileName
 import java.io.File
 
 object UserController {
@@ -43,17 +45,18 @@ object UserController {
         sendRequest(OrderData(Order.Register, user))
     }
 
-    suspend fun sendUpdateUserRequest(user: User) {
+    suspend fun sendUpdateUserRequest(context: Context, user: User) {
         sendRequest(OrderData(Order.UpdateUser, user))
         if (user.profilePath != ClientController.client.user!!.profilePath) {
             if (user.profilePath != null) {
+                val profilePath = user.profilePath.toString()
+                val fileName = getFileName(profilePath)
+                user.profilePath = fileName
                 sendRequest(OrderData(Order.UpdateProfile, user))
-                uploadFile(user.profilePath!!)
+                uploadFile(fileName, profilePath, context)
             }
         }
     }
-
-
 
 
 }

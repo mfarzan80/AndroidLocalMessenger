@@ -12,28 +12,30 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.group.androidlocalmessanger.module.Group
 import net.group.androidlocalmessanger.module.GroupWithUsers
 import net.group.androidlocalmessanger.module.User
-import net.group.androidlocalmessanger.network.client.controller.ClientController
+import net.group.androidlocalmessanger.network.client.controller.ClientReceiver
 import net.group.androidlocalmessanger.ui.component.ActivityView
-import net.group.androidlocalmessanger.ui.component.GroupIcon
 import net.group.androidlocalmessanger.ui.component.HSpacer
 import net.group.androidlocalmessanger.ui.component.OutlinedInput
 import net.group.androidlocalmessanger.ui.main.MainViewModule
-import net.group.androidlocalmessanger.ui.main.MainViewModule.Companion.checkProfile
-import net.group.androidlocalmessanger.ui.navigation.Screen
-import net.group.androidlocalmessanger.utils.Catcher
-import net.group.androidlocalmessanger.utils.ListTypeConverters.Companion.gson
+import net.group.androidlocalmessanger.ui.main.MainViewModule.Companion.getMe
 import java.io.File
 
 @Composable
@@ -41,7 +43,7 @@ fun AddConversationScreen(navController: NavController, mainViewModule: MainView
     val users = mainViewModule.users.value.data!!
     val groupType = remember { mutableStateOf(Group.GROUP_TYPE_CHAT) }
     if (groupType.value != Group.GROUP_TYPE_CHAT && mainViewModule.users.value.data != null)
-        UsersDialog(groupType, users, onConfirm = {
+        GroupWizard(groupType, users, onConfirm = {
             mainViewModule.addGroup(it)
             navController.popBackStack()
         })
@@ -83,14 +85,14 @@ fun AddConversationScreen(navController: NavController, mainViewModule: MainView
 }
 
 @Composable
-fun UsersDialog(
+fun GroupWizard(
     groupType: MutableState<String>,
     users: List<User>,
     onConfirm: (group: GroupWithUsers) -> Unit
 ) {
     val rowModifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)
     val selectedUsers = remember {
-        mutableSetOf<User>()
+        mutableStateListOf<User>()
     }
     val name = remember { mutableStateOf("") }
     Dialog(onDismissRequest = {
@@ -102,23 +104,25 @@ fun UsersDialog(
                 OutlinedInput(modifier = rowModifier, valueState = name, label = "Name")
                 LazyColumn {
                     items(users) { user ->
-                        //  if (user == ClientController.client.user) return@items
-                        Row(
-                            modifier = rowModifier.background(
-                                color = if (!selectedUsers.contains(user))
-                                    MaterialTheme.colors.background
-                                else
-                                    MaterialTheme.colors.primary
-                            )
-                                .clickable {
-                                    if (!selectedUsers.contains(user))
-                                        selectedUsers.add(user)
+                        if (user != getMe()) {
+                            Row(
+                                modifier = rowModifier.background(
+                                    color = if (!selectedUsers.contains(user))
+                                        MaterialTheme.colors.background
                                     else
-                                        selectedUsers.remove(user)
-                                }) {
-                            GroupIcon()
-                            HSpacer(10.dp)
-                            Text(text = user.name, style = MaterialTheme.typography.button)
+                                        MaterialTheme.colors.primary
+                                )
+                                    .clickable {
+                                        if (!selectedUsers.contains(user))
+                                            selectedUsers.add(user)
+                                        else
+                                            selectedUsers.remove(user)
+                                    }, verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                UserProfile(user)
+                                HSpacer(10.dp)
+                                Text(text = user.name, style = MaterialTheme.typography.button)
+                            }
                         }
                     }
                 }
@@ -128,11 +132,15 @@ fun UsersDialog(
                         .fillMaxWidth()
                         .padding(horizontal = 30.dp, vertical = 10.dp),
                     onClick = {
-                        val group = GroupWithUsers(
-                            group = Group(name = name.value, type = groupType.value),
-                            users = selectedUsers.toList()
+                        val group = Group(name = name.value, type = groupType.value)
+                        group.adminIds.add(getMe().userEmail)
+                        val groupUsers = ArrayList(selectedUsers)
+                        groupUsers.add(getMe())
+                        val groupWithUsers = GroupWithUsers(
+                            group = group,
+                            users = groupUsers
                         )
-                        onConfirm(group)
+                        onConfirm(groupWithUsers)
                     }) {
                     Text("Create")
                 }
@@ -153,14 +161,17 @@ fun UsersLazyColomn(
     ) {
     LazyColumn(modifier = modifier) {
         items(users) { user ->
-            Row(
-                modifier = rowModifier.background(color = rowBackground(user))
-                    .clickable {
-                        rowClick(user)
-                    }) {
-                UserProfile(user)
-                HSpacer(10.dp)
-                Text(text = user.name, style = MaterialTheme.typography.button)
+            if (user != getMe()) {
+                Row(
+                    modifier = rowModifier.background(color = rowBackground(user))
+                        .clickable {
+                            rowClick(user)
+                        }, verticalAlignment = Alignment.CenterVertically
+                ) {
+                    UserProfile(user)
+                    HSpacer(10.dp)
+                    Text(text = user.name, style = MaterialTheme.typography.button)
+                }
             }
 
         }
@@ -168,31 +179,50 @@ fun UsersLazyColomn(
 }
 
 @Composable
-fun UserProfile(user: User) {
-    val catcher = Catcher(LocalContext.current)
-    val imageModifier = Modifier.size(50.dp)
-    val hasProfile = user.profilePath != null
+fun UserProfile(user: User, size: Dp = 50.dp) {
+    val context = LocalContext.current
+    val imageModifier = Modifier.size(size)
+    var profileImg by remember { mutableStateOf<File?>(null) }
     Log.d("Screen", "ProfileImage:ServerPath: ${user.profilePath}")
+
+    LaunchedEffect(key1 = true) {
+
+        CoroutineScope(Dispatchers.Main).launch {
+
+            if (user.showProfile && user.profilePath != null) {
+                profileImg = withContext(Dispatchers.IO) {
+                    ClientReceiver.receiveFile(context, user.profilePath!!, ".jpg")
+                }
+                Log.d("Screen", "ProfileImage:LocalPath: ${profileImg?.path}")
+
+
+            }
+        }
+
+    }
+
     Card(shape = CircleShape, elevation = 0.dp) {
-        val path = catcher.getLocalPathByServerPath(user.profilePath)
-        Log.d("Screen", "ProfileImage:LocalPath: $path")
-        if (hasProfile && path != null) {
+
+        if (!user.showProfile || user.profilePath == null) {
+            Image(
+                modifier = imageModifier,
+                imageVector = Icons.Filled.AccountCircle,
+                contentDescription = "ProfilePhoto"
+            )
+        } else if (profileImg == null) {
+            CircularProgressIndicator()
+        } else {
             Image(
                 painter = rememberAsyncImagePainter(
-                    ImageRequest.Builder(LocalContext.current)
-                        .data(path)
+                    ImageRequest.Builder(context)
+                        .data(profileImg!!.path)
                         .build()
                 ),
                 contentDescription = "ProfilePhoto",
                 contentScale = ContentScale.Crop,
                 modifier = imageModifier
             )
-        } else {
-            Image(
-                modifier = imageModifier,
-                imageVector = Icons.Filled.AccountCircle,
-                contentDescription = "ProfilePhoto"
-            )
         }
+
     }
 }
