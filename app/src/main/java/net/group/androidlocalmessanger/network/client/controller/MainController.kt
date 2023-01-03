@@ -5,27 +5,33 @@ import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.*
 import net.group.androidlocalmessanger.ui.chat.ChatViewModel
 import net.group.androidlocalmessanger.ui.main.MainViewModule
-import net.group.androidlocalmessanger.utils.Catcher
+import net.group.androidlocalmessanger.utils.Utils
 
 object MainController {
     val groupIdToChatViewModel: HashMap<String, ChatViewModel> = hashMapOf()
     val mainViewModule = MainViewModule()
 
-    suspend fun sendGroupsRequest() {
-        Sender.sendRequest(orderData = OrderData(Order.GetMyGroups, null))
-    }
+    suspend fun sendMessage(context: Context, message: Message) {
 
-    suspend fun sendUsersRequest() {
-        Sender.sendRequest(orderData = OrderData(Order.GetAllUsers, null))
-    }
+        if (message.attachedFileName != null) {
+            val fileName = Utils.getFileName(message.attachedFileName)
+            val filePath = message.attachedFileName.toString()
+            message.attachedFileName = fileName
+            Sender.sendRequest(OrderData(Order.SendMessage, message))
+            Sender.uploadFile(fileName, filePath, context)
+        } else
+            Sender.sendRequest(OrderData(Order.SendMessage, message))
 
-    suspend fun sendMessage(message: Message) {
-        Sender.sendRequest(OrderData(Order.SendMessage, message))
     }
 
     suspend fun createGroup(group: GroupWithUsers) {
         Sender.sendRequest(OrderData(Order.CreateGroup, group))
     }
+
+    suspend fun sendUpdatedGroup(group: GroupWithUsers) {
+        Sender.sendRequest(OrderData(Order.UpdateGroup, group))
+    }
+
 
     fun refreshGroups(response: Response<*>) {
         val groups = response.data as List<GroupWithUsers>
@@ -33,22 +39,7 @@ object MainController {
     }
 
     fun refreshUsers(context: Context, response: Response<*>) {
-        val catcher = Catcher(context)
         val users = response.data as List<User>
-        users.forEach { user ->
-            if (user.profilePath != null) {
-                if (catcher.getLocalPathByServerPath(user.profilePath) == null) {
-                    val profileFile =
-                        ClientReceiver.receiveFile(
-                            context,
-                            user.userEmail + "_ProfilePhoto" + System.nanoTime() + ".jpg"
-                        )
-
-                    catcher.saveLocalPath(user.profilePath, profileFile.path)
-
-                }
-            }
-        }
         val de = DataOrException(users, false, response.code)
         mainViewModule.setUsers(de)
     }

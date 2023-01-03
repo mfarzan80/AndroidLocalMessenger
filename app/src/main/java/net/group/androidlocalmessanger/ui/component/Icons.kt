@@ -10,23 +10,25 @@ import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import net.group.androidlocalmessanger.module.Group
 
 @Composable
-fun GroupIcon() {
+fun GroupIcon(size: Dp = 50.dp) {
     Card(
-        modifier = Modifier.size(40.dp),
+        modifier = Modifier.size(size),
         backgroundColor = MaterialTheme.colors.surface,
         shape = CircleShape,
         elevation = 0.dp
     ) {
         Icon(
             modifier = Modifier.fillMaxWidth().padding(5.dp),
-            imageVector = Icons.Default.Person,
+            imageVector = Icons.Default.Group,
             contentDescription = "group icon"
         )
     }

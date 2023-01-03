@@ -26,6 +26,8 @@ class ServerUserController(private val clientHandler: ClientHandler) {
             }
         )
 
+        sendUsers()
+        clientHandler.groupsController.loadGroupsAndSend()
 
     }
 
@@ -54,6 +56,8 @@ class ServerUserController(private val clientHandler: ClientHandler) {
             Log.d(TAG, "register:insertUser $user")
         }
 
+        sendUsers()
+        clientHandler.groupsController.loadGroupsAndSend()
     }
 
     suspend fun updateUser(orderData: OrderData<*>) {
@@ -100,10 +104,6 @@ class ServerUserController(private val clientHandler: ClientHandler) {
                 users
             )
         )
-        users.forEach { user ->
-            if (user.profilePath != null)
-                clientHandler.sendFile(user.profilePath!!)
-        }
     }
 
     private suspend fun setUpdatedUser(updatedUser: User) {

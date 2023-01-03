@@ -3,7 +3,6 @@ package net.group.androidlocalmessanger.ui.main
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -11,33 +10,18 @@ import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.*
 import net.group.androidlocalmessanger.network.client.controller.ClientController
 import net.group.androidlocalmessanger.network.client.controller.MainController
-import net.group.androidlocalmessanger.network.client.controller.UserController
 import java.io.File
 
 class MainViewModule : ViewModel() {
 
     val groups = mutableStateMapOf<String, GroupWithUsers>()
-    val groupLoading = mutableStateOf(false)
+    val groupLoading = mutableStateOf(true)
 
     val users: MutableState<DataOrException<List<User>, Boolean, ResponseCode>> =
         mutableStateOf(
-            DataOrException(listOf(), false, null)
+            DataOrException(listOf(), true, null)
         )
 
-    fun sendGroupsRequest() {
-        viewModelScope.launch {
-            groupsLoading()
-            MainController.sendGroupsRequest()
-        }
-    }
-
-    fun sendUsersRequest() {
-        viewModelScope.launch {
-            startUsersLoading()
-            MainController.sendUsersRequest()
-        }
-
-    }
 
     fun addGroup(groupWithUsers: GroupWithUsers) {
         viewModelScope.launch {
@@ -50,21 +34,28 @@ class MainViewModule : ViewModel() {
 
 
     fun setGroups(newGroups: List<GroupWithUsers>) {
+        groupLoading.value = false
         newGroups.forEach {
             groups[it.group.groupId] = it
         }
     }
+
+    fun sendUpdatedGroup(groupWithUsers: GroupWithUsers) {
+        viewModelScope.launch {
+            MainController.sendUpdatedGroup(groupWithUsers)
+            updateGroup(groupWithUsers)
+        }
+    }
+
+
 
     fun updateGroup(groupWithUsers: GroupWithUsers) {
         groups[groupWithUsers.group.groupId] = groupWithUsers
     }
 
     fun setUsers(dataOrException: DataOrException<List<User>, Boolean, ResponseCode>) {
-
-            users.value = dataOrException
-
+        users.value = dataOrException
     }
-
 
 
     private fun startUsersLoading() {
@@ -102,7 +93,7 @@ class MainViewModule : ViewModel() {
 
 
     companion object {
-        fun getUser(): User {
+        fun getMe(): User {
             return ClientController.client.user!!
         }
 

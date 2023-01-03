@@ -2,7 +2,6 @@ package net.group.androidlocalmessanger.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,10 +30,15 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.talhafaki.composablesweettoast.util.SweetToastUtil
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.ResponseCode
 import net.group.androidlocalmessanger.module.User
 import net.group.androidlocalmessanger.module.UserWithGroups
+import net.group.androidlocalmessanger.network.client.controller.ClientReceiver
 import net.group.androidlocalmessanger.ui.auth.UserViewModel
 import net.group.androidlocalmessanger.ui.component.ActivityView
 import net.group.androidlocalmessanger.ui.component.LoadingErrorDataView
@@ -45,6 +49,7 @@ import java.io.File
 
 @Composable
 fun SettingScreen(navController: NavController, userViewModel: UserViewModel) {
+    val context = LocalContext.current
     LaunchedEffect(true) {
         userViewModel.resetUpdatedUser()
     }
@@ -70,7 +75,7 @@ fun SettingScreen(navController: NavController, userViewModel: UserViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                ProfileImage(profilePhotoPath, userViewModel)
+                ProfileImage(profilePhotoPath)
                 val modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
                 OutlinedInput(
                     modifier = modifier,
@@ -133,7 +138,7 @@ fun SettingScreen(navController: NavController, userViewModel: UserViewModel) {
                     newUser.showPhoneNumber = showPhoneNumber.value
                     newUser.userName = userName.value
                     newUser.phoneNumber = phoneNumber.value
-                    userViewModel.updateUser(newUser)
+                    userViewModel.updateUser(context, newUser)
                 }) {
                 Text("Save")
             }
@@ -162,15 +167,16 @@ fun LabelSwitch(
 }
 
 @Composable
-fun ProfileImage(profilePhotoPath: MutableState<String?>, userViewModel: UserViewModel) {
+fun ProfileImage(profilePhotoPath: MutableState<String?>) {
+    var profileImg by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
     val pickPictureLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { imageUri ->
         if (imageUri != null) {
-            val imgFile = FileUtil.from(context, imageUri)
-            Log.d("Screen", "ProfileImage: ${imgFile.path}")
-            profilePhotoPath.value = imgFile?.path
+            profileImg = FileUtil.from(context, imageUri)
+            Log.d("Screen", "ProfileImage: ${profileImg!!.path}")
+            profilePhotoPath.value = profileImg!!.path
         }
     }
 
@@ -198,6 +204,16 @@ fun ProfileImage(profilePhotoPath: MutableState<String?>, userViewModel: UserVie
         }
     }
     Card(shape = CircleShape, elevation = 0.dp, backgroundColor = MaterialTheme.colors.background) {
+        LaunchedEffect(key1 = true) {
+            CoroutineScope(Dispatchers.Main).launch {
+                if (profilePhotoPath.value != null) {
+                    profileImg = withContext(Dispatchers.IO) {
+                        ClientReceiver.receiveFile(context, profilePhotoPath.value!!, ".jpg")
+                    }
+                }
+            }
+        }
+
         if (profilePhotoPath.value == null)
             Image(
                 modifier = imageModifier,
@@ -206,29 +222,24 @@ fun ProfileImage(profilePhotoPath: MutableState<String?>, userViewModel: UserVie
             )
         else {
             Log.d("Screen", "ProfileImage: ${profilePhotoPath.value}")
-            if (File(profilePhotoPath.value!!).exists()) {
-
+            Log.d("Screen", "ProfileImage:LocalPath: ${profileImg?.path}")
+            if (profileImg == null)
+                CircularProgressIndicator()
+            else
                 Image(
                     painter = rememberAsyncImagePainter(
                         ImageRequest.Builder(LocalContext.current)
-                            .data(profilePhotoPath.value)
+                            .data(profileImg!!.path)
                             .build()
                     ),
                     contentDescription = "ProfilePhoto",
                     contentScale = ContentScale.Crop,
                     modifier = imageModifier
                 )
-            } else {
-                //  userViewModel.getProfilePhoto()
-
-            }
-
         }
-
     }
-
-
 }
+
 
 @Preview(showBackground = true)
 @Composable

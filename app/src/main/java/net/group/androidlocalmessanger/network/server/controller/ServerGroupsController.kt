@@ -45,6 +45,9 @@ class ServerGroupsController(private val clientHandler: ClientHandler) {
     suspend fun sendMessage(orderData: OrderData<*>) {
         val message = orderData.data as Message
         val groupWithUsers = groupRepository.getGroupById(message.groupId)
+        if (message.attachedFileName != null) {
+            clientHandler.receiveFile(message.attachedFileName!!)
+        }
         if (groupWithUsers != null) {
             groupWithUsers.group.messages.add(message)
             groupRepository.updateGroup(groupWithUsers.group)
@@ -62,6 +65,40 @@ class ServerGroupsController(private val clientHandler: ClientHandler) {
         groupWithUsers.users.forEach {
             ServerService.userToClient[it]?.groupsController?.sendUserGroups(groups)
         }
+    }
+
+    suspend fun updateGroupWithUsers(orderData: OrderData<*>) {
+        val clientGroup = orderData.data as GroupWithUsers
+        val serverGroup = groupRepository.getGroupById(clientGroup.group.groupId)
+        var removedUser: User? = null
+        var addedUsers: ArrayList<User>? = null
+        if (clientGroup.users.size < serverGroup!!.users.size) { // remove user
+            clientGroup.users.forEach {
+                if (!serverGroup.users.contains(it)) {
+                    removedUser = it
+                    return@forEach
+                }
+            }
+        } else if (clientGroup.users.size > serverGroup.users.size) {
+            groupRepository.insertOrUpdateGroupUsers(clientGroup)
+            addedUsers = ArrayList()
+            clientGroup.users.forEach {
+                if (!serverGroup.users.contains(it)) {
+                    addedUsers.add(it)
+                }
+            }
+        }
+        groupRepository.updateGroup(clientGroup.group)
+        if (removedUser != null) {
+            groupRepository.removeUserFromGroup(removedUser!!, group = serverGroup.group)
+            ServerService.userToClient[removedUser]!!.groupsController.loadGroupsAndSend()
+        } else if (addedUsers != null) {
+            val allGroups = groupRepository.getAllGroups()
+            addedUsers.forEach {
+                ServerService.userToClient[it]!!.groupsController.sendUserGroups(allGroups)
+            }
+        } else
+            sendAGroupToItsUsers(clientGroup)
     }
 
 }

@@ -22,6 +22,7 @@ data class Group(val name: String, val type: String) : Serializable {
     var groupId: String = UUID.randomUUID().toString()
 
     var adminIds = ArrayList<String>()
+    var blackList = ArrayList<String>()
 
     var messages = ArrayList<Message>()
 
@@ -34,6 +35,7 @@ data class Group(val name: String, val type: String) : Serializable {
     override fun hashCode(): Int {
         return groupId.hashCode()
     }
+
 
 
 }

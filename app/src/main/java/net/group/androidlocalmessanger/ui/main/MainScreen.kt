@@ -1,10 +1,7 @@
 package net.group.androidlocalmessanger.ui.main
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
@@ -18,27 +15,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import net.group.androidlocalmessanger.module.Group
 import net.group.androidlocalmessanger.module.GroupWithUsers
-import net.group.androidlocalmessanger.ui.ProfileImage
 import net.group.androidlocalmessanger.ui.UserProfile
 import net.group.androidlocalmessanger.ui.component.ActivityView
 import net.group.androidlocalmessanger.ui.component.GroupIcon
 import net.group.androidlocalmessanger.ui.component.HSpacer
-import net.group.androidlocalmessanger.ui.main.MainViewModule.Companion.getUser
+import net.group.androidlocalmessanger.ui.component.VSpacer
+import net.group.androidlocalmessanger.ui.main.MainViewModule.Companion.getMe
 import net.group.androidlocalmessanger.ui.navigation.Screen
 import net.group.androidlocalmessanger.ui.theme.AndroidLocalMessangerTheme
-import net.group.androidlocalmessanger.utils.ListTypeConverters.Companion.gson
 
 @Composable
 fun MainScreen(navController: NavController, mainViewModule: MainViewModule) {
-    LaunchedEffect(key1 = true) {
-        mainViewModule.sendUsersRequest()
-        mainViewModule.sendGroupsRequest()
-    }
+
     val groups = mainViewModule.groups
     ActivityView(floatingActionButton = {
         FloatingActionButton(onClick = {
@@ -67,50 +63,65 @@ fun MainScreen(navController: NavController, mainViewModule: MainViewModule) {
         }
     }) {
         val modifier = Modifier.padding(horizontal = 20.dp)
-        LazyColumn {
-
-            items(groups.values.toList()) { group ->
-                Row(
-                    modifier = modifier
-                        .padding(vertical = 10.dp)
-                        .fillMaxWidth()
-                        .clickable {
-                            navController.navigate(
-                                Screen.ChatScreen.name + "/${
-                                    group.group.groupId
-                                }"
-                            )
-                        }
+        if (mainViewModule.groupLoading.value) {
+            Dialog(
+                onDismissRequest = { },
+                DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
                 ) {
+                    CircularProgressIndicator()
+                }
+            }
+        } else {
 
-                    GroupProfile(group)
-                    HSpacer(10.dp)
-                    Column {
-                        Text(
-                            text = group.getGroupName(getUser()),
-                            style = MaterialTheme.typography.button
-                        )
+            LazyColumn {
 
-                        Text(
-                            text = group.users.size.toString(),
-                            style = MaterialTheme.typography.caption
-                        )
+                items(groups.values.toList()) { group ->
+                    Row(
+                        modifier = modifier
+                            .padding(vertical = 10.dp)
+                            .fillMaxWidth()
+                            .clickable {
+                                navController.navigate(
+                                    Screen.ChatScreen.name + "/${
+                                        group.group.groupId
+                                    }"
+                                )
+                            }, verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        GroupProfile(group)
+                        HSpacer(10.dp)
+                        Column {
+                            Text(
+                                text = group.getGroupName(getMe()),
+                                style = MaterialTheme.typography.h6
+                            )
+                            if (group.group.messages.isNotEmpty()) {
+                                VSpacer(5.dp)
+                                Text(
+                                    text = group.group.messages.last().textOrFile(),
+                                    style = MaterialTheme.typography.caption
+                                )
+                            }
+                        }
+
                     }
 
                 }
 
             }
-
         }
-
     }
 
 }
 
 @Composable
-fun GroupProfile(group: GroupWithUsers) {
+fun GroupProfile(group: GroupWithUsers, size: Dp = 50.dp) {
     if (group.group.type == Group.GROUP_TYPE_CHAT) {
-        UserProfile(group.getContact(getUser()))
+        UserProfile(group.getContact(getMe()), size)
     } else {
         GroupIcon()
     }

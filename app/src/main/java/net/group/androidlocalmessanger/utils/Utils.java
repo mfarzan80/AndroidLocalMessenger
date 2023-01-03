@@ -1,9 +1,11 @@
 package net.group.androidlocalmessanger.utils;
 
 import static android.content.Context.DOWNLOAD_SERVICE;
+import static android.provider.ContactsContract.Directory.PACKAGE_NAME;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.DhcpInfo;
 import android.net.Uri;
@@ -13,6 +15,11 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.text.format.Formatter;
 import android.util.Log;
+
+import androidx.core.content.FileProvider;
+
+import net.group.androidlocalmessanger.App;
+import net.group.androidlocalmessanger.BuildConfig;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -50,6 +57,13 @@ public class Utils {
         Log.d(TAG, "sendFile: End" + file.length());
         outputStream.flush();
         in.close();
+    }
+
+    public static String getFileName(String path) {
+        String[] str = path.split(File.separator);
+        String name = str[str.length - 1];
+        Log.d(TAG, "getFileName: " + name);
+        return "_" + name;
     }
 
     public static void receiveFile(File file, ObjectInputStream inputStream) throws IOException {
@@ -109,5 +123,16 @@ public class Utils {
         String s = cursor.getString(column_index);
         cursor.close();
         return s;
+    }
+
+    public static void openFile(Context context, String path) {
+        File file = new File(path);
+        Uri uri = FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".provider", file);
+        String mime = context.getContentResolver().getType(uri);
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_VIEW);
+        intent.setDataAndType(uri, mime);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        context.startActivity(intent);
     }
 }

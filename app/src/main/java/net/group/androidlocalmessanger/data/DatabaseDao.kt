@@ -14,8 +14,11 @@ interface DatabaseDao {
     @Insert(entity = Group::class, onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGroup(group: Group)
 
-    @Insert(entity = UserGroupCrossRef::class, onConflict = OnConflictStrategy.REPLACE)
+    @Insert(entity = UserGroupCrossRef::class, onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertUserGroupRel(userGroupCrossRef: UserGroupCrossRef)
+
+    @Delete(entity = UserGroupCrossRef::class)
+    suspend fun removeUserFromGroup(userGroupCrossRef: UserGroupCrossRef)
 
     @Update(entity = Group::class)
     suspend fun updateGroup(group: Group)
