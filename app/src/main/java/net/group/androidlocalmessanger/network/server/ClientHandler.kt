@@ -15,10 +15,9 @@ import net.group.androidlocalmessanger.repository.UserRepository
 import net.group.androidlocalmessanger.utils.Utils
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
-import java.io.OutputStream
+import java.util.UUID
 
 
 class ClientHandler(
@@ -66,8 +65,8 @@ class ClientHandler(
                                 Order.UpdateProfile -> userController.updateUserProfile(orderData)
                                 Order.CreateGroup -> groupsController.addGroup(orderData)
                                 Order.SendMessage -> groupsController.sendMessage(orderData)
-                                Order.GetMyGroups -> groupsController.loadGroupsAndSend()
-                                Order.GetAllUsers -> userController.sendUsers()
+                                Order.UpdateGroup -> groupsController.updateGroupWithUsers(orderData)
+                                Order.GetFile -> sendFile(orderData)
                             }
 
                         }
@@ -97,14 +96,14 @@ class ClientHandler(
         withContext(Dispatchers.IO) {
             output.writeObject(response)
             output.flush()
-            Log.d(TAG, "TcpClientHandler: sendResponse: $response")
+            Log.d(TAG, "sendResponse: $response")
         }
     }
 
 
     fun receiveFile(fileName: String): File {
         val receivedFile =
-            File(Utils.getCashFolder(context).absolutePath + File.separator + fileName)
+            File(Utils.getCashFolder(context).absolutePath + File.separator + System.nanoTime() + fileName)
         receivedFile.createNewFile()
         Log.d(TAG, "receiveFile start: " + receivedFile.path)
         Utils.receiveFile(receivedFile, input)
@@ -113,7 +112,9 @@ class ClientHandler(
         return receivedFile
     }
 
-    suspend fun sendFile(filePath: String) {
+    suspend fun sendFile(orderData: OrderData<*>) {
+        sendResponse(Response(ResponseCode.OK, ResponseType.SendingFile, null))
+        val filePath = orderData.data as String
         withContext(Dispatchers.IO) {
             Utils.sendFile(File(filePath), output)
         }
