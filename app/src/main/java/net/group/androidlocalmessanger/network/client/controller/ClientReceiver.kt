@@ -9,6 +9,7 @@ import net.group.androidlocalmessanger.module.OrderData
 import net.group.androidlocalmessanger.module.Response
 import net.group.androidlocalmessanger.module.ResponseType
 import net.group.androidlocalmessanger.network.client.controller.ClientController.TAG
+import net.group.androidlocalmessanger.network.client.controller.ClientController.fInput
 import net.group.androidlocalmessanger.network.client.controller.ClientController.input
 import net.group.androidlocalmessanger.network.client.controller.MainController.refreshGroups
 import net.group.androidlocalmessanger.network.client.controller.MainController.refreshUsers
@@ -26,6 +27,8 @@ object ClientReceiver {
 
     var responseReceiver = true
 
+    var receiving = false
+
     suspend fun startReceiver(context: Context) {
 
         responseReceiver = true
@@ -42,8 +45,10 @@ object ClientReceiver {
                         ResponseType.UpdatedUser -> updateUserResponse(response)
                         ResponseType.AllGroups -> refreshGroups(response)
                         ResponseType.UpdatedGroup -> updateGroup(response)
-                        ResponseType.AllUsers -> refreshUsers(context, response)
-                        ResponseType.SendingFile -> stopResponseReceiver()
+                        ResponseType.AllUsers -> refreshUsers(response)
+                        ResponseType.SendingFile -> {
+                            //    stopResponseReceiver()
+                        }
                         null -> {}
                     }
                 } catch (e: IOException) {
@@ -69,6 +74,8 @@ object ClientReceiver {
         Log.d(TAG, "receiveFile:Local: $localPath")
         return if (localPath == null) {
             return withContext(Dispatchers.IO) {
+                while (receiving){}
+                receiving = true
                 Sender.sendRequest(OrderData(Order.GetFile, fileName))
                 val downloadedFile =
                     File(
@@ -77,28 +84,16 @@ object ClientReceiver {
                     )
                 downloadedFile.createNewFile()
                 Log.d(ClientHandler.TAG, "receiveFile start: " + downloadedFile.path)
-                waitForStopReceiver()
-                Utils.receiveFile(downloadedFile, input)
-                startReceiver(context)
+                Utils.receiveFile(downloadedFile, fInput)
                 Log.d(ClientHandler.TAG, "receiveFile Finish: " + downloadedFile.path)
                 Utils.saveToDownload(context, downloadedFile)
                 catcher.saveLocalPath(fileName, downloadedFile.path)
+                receiving = false
                 downloadedFile
             }
         } else {
             File(localPath)
         }
-    }
-
-    private fun waitForStopReceiver() {
-        Log.d(TAG, "waitForStopReceiver: start")
-        while (responseReceiver) {
-        }
-        Log.d(TAG, "waitForStopReceiver: end")
-    }
-
-    fun stopResponseReceiver() {
-        responseReceiver = false
     }
 
 

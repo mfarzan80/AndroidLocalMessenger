@@ -12,25 +12,23 @@ import net.group.androidlocalmessanger.network.server.controller.ServerGroupsCon
 import net.group.androidlocalmessanger.network.server.controller.ServerUserController
 import net.group.androidlocalmessanger.repository.GroupRepository
 import net.group.androidlocalmessanger.repository.UserRepository
-import net.group.androidlocalmessanger.utils.Utils
-import java.io.File
 import java.io.IOException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
-import java.util.UUID
 
 
 class ClientHandler(
     val context: Context,
     val userRepository: UserRepository,
     val groupRepository: GroupRepository,
-    val client: Client
+    val client: Client,
+    val fileHandler: FileHandler
 ) {
 
     lateinit var output: ObjectOutputStream
     lateinit var input: ObjectInputStream
     lateinit var groupsController: ServerGroupsController
-
+    lateinit var userController: ServerUserController
     private val socket = client.socket
 
     companion object {
@@ -41,7 +39,7 @@ class ClientHandler(
 
     suspend fun handle() {
 
-        val userController = ServerUserController(this)
+        userController = ServerUserController(this)
         groupsController = ServerGroupsController(this)
 
         withContext(Dispatchers.IO) {
@@ -66,7 +64,7 @@ class ClientHandler(
                                 Order.CreateGroup -> groupsController.addGroup(orderData)
                                 Order.SendMessage -> groupsController.sendMessage(orderData)
                                 Order.UpdateGroup -> groupsController.updateGroupWithUsers(orderData)
-                                Order.GetFile -> sendFile(orderData)
+                                Order.GetFile -> fileHandler.sendFile(context, orderData)
                             }
 
                         }
@@ -101,25 +99,9 @@ class ClientHandler(
     }
 
 
-    fun receiveFile(fileName: String): File {
-        val receivedFile =
-            File(Utils.getCashFolder(context).absolutePath + File.separator + System.nanoTime() + fileName)
-        receivedFile.createNewFile()
-        Log.d(TAG, "receiveFile start: " + receivedFile.path)
-        Utils.receiveFile(receivedFile, input)
-        Log.d(TAG, "receiveFile Finish: " + receivedFile.path)
-        Utils.saveToDownload(context, receivedFile)
-        return receivedFile
+    suspend fun receiveFile(fileName: String) {
+        fileHandler.receiveFile(context, fileName)
     }
-
-    suspend fun sendFile(orderData: OrderData<*>) {
-        sendResponse(Response(ResponseCode.OK, ResponseType.SendingFile, null))
-        val filePath = orderData.data as String
-        withContext(Dispatchers.IO) {
-            Utils.sendFile(File(filePath), output)
-        }
-    }
-
 
 }
 

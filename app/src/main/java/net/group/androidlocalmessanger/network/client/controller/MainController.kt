@@ -38,7 +38,7 @@ object MainController {
         mainViewModule.setGroups(groups)
     }
 
-    fun refreshUsers(context: Context, response: Response<*>) {
+    fun refreshUsers(response: Response<*>) {
         val users = response.data as List<User>
         val de = DataOrException(users, false, response.code)
         mainViewModule.setUsers(de)
@@ -47,10 +47,19 @@ object MainController {
 
     fun updateGroup(response: Response<*>) {
         val groupWithUsers = response.data as GroupWithUsers
-        groupIdToChatViewModel[groupWithUsers.group.groupId]?.messages?.clear()
-        groupIdToChatViewModel[groupWithUsers.group.groupId]?.messages?.addAll(groupWithUsers.group.messages)
+        val chatViewModel = getChatViewModelByGroup(groupWithUsers)
+        chatViewModel.messages.clear()
+        chatViewModel.messages.addAll(groupWithUsers.group.messages)
         mainViewModule.updateGroup(groupWithUsers)
     }
 
+    fun getChatViewModelByGroup(groupWithUsers: GroupWithUsers): ChatViewModel {
+        var chatViewModel = groupIdToChatViewModel[groupWithUsers.group.groupId]
+        if (chatViewModel == null) {
+            chatViewModel = ChatViewModel(groupWithUsers)
+            groupIdToChatViewModel[groupWithUsers.group.groupId] = chatViewModel
+        }
 
+        return chatViewModel
+    }
 }

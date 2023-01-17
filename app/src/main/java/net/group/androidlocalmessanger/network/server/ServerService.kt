@@ -32,7 +32,7 @@ class ServerService : Service() {
     companion object {
         const val TAG = "TcpServerService"
         const val PORT = 9876
-        const val HOST = "192.168.43.1"
+        const val FT_PORT = 8765
         val working = AtomicBoolean(false)
         val userToClient = HashMap<User, ClientHandler>()
     }
@@ -59,21 +59,26 @@ class ServerService : Service() {
     private suspend fun startServer() {
 
         var socket: Socket? = null
+        var fileSocket: Socket?
         withContext(Dispatchers.IO) {
             try {
 
                 val server = ServerSocket(PORT)
+                val fileServer = ServerSocket(FT_PORT)
 
                 while (working.get()) {
 
                     socket = server.accept()
-
+                    fileSocket = fileServer.accept()
+                    val fileHandler = FileHandler(fileSocket!!)
+                    fileHandler.setStreams()
                     val clientHandler =
                         ClientHandler(
                             this@ServerService,
                             userRepository,
                             groupRepository,
-                            Client(socket!!)
+                            Client(socket!!),
+                            fileHandler
                         )
                     clientHandler.handle()
 
@@ -120,7 +125,6 @@ class ServerService : Service() {
             val notificationBuilder = NotificationCompat.Builder(this)
             notification = notificationBuilder.setOngoing(true)
                 .setContentTitle(tittle)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build()
         }

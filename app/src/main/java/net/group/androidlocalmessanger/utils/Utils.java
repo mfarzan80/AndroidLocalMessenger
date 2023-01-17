@@ -21,6 +21,8 @@ import androidx.core.content.FileProvider;
 import net.group.androidlocalmessanger.App;
 import net.group.androidlocalmessanger.BuildConfig;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -30,6 +32,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.UUID;
 
 
 public class Utils {
@@ -63,7 +66,7 @@ public class Utils {
         String[] str = path.split(File.separator);
         String name = str[str.length - 1];
         Log.d(TAG, "getFileName: " + name);
-        return "_" + name;
+        return UUID.randomUUID().toString()+ "_" + name;
     }
 
     public static void receiveFile(File file, ObjectInputStream inputStream) throws IOException {

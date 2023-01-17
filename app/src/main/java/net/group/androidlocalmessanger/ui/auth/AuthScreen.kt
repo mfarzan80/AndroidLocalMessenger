@@ -24,7 +24,7 @@ import net.group.androidlocalmessanger.ui.navigation.Screen
 @Composable
 fun AuthScreen(navController: NavController, userViewModel: UserViewModel) {
     val user = userViewModel.userState.value
-    val login = remember { mutableStateOf(false) }
+    val login = remember { mutableStateOf(true) }
     val name = remember { mutableStateOf("") }
     val email = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }

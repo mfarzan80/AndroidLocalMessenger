@@ -136,7 +136,10 @@ fun SettingScreen(navController: NavController, userViewModel: UserViewModel) {
                     newUser.showProfile = showProfile.value
                     newUser.profilePath = profilePhotoPath.value
                     newUser.showPhoneNumber = showPhoneNumber.value
-                    newUser.userName = userName.value
+                    if(userName.value.isNotEmpty())
+                        newUser.userName = userName.value
+                    else
+                        newUser.userName = null
                     newUser.phoneNumber = phoneNumber.value
                     userViewModel.updateUser(context, newUser)
                 }) {

@@ -113,7 +113,10 @@ fun GroupScreen(
                                     onDismissRequest = { expanded = false }
                                 ) {
                                     DropdownMenuItem(onClick = {
-                                        group.group.adminIds.add(user.userEmail)
+                                        if (!isAdmin)
+                                            group.group.adminIds.add(user.userEmail)
+                                        else
+                                            group.group.adminIds.remove(user.userEmail)
                                         mainViewModule.sendUpdatedGroup(group)
                                     }) {
                                         if (!isAdmin)
@@ -122,7 +125,10 @@ fun GroupScreen(
                                             Text("Remove from admins")
                                     }
                                     DropdownMenuItem(onClick = {
-                                        group.group.blackList.add(user.userEmail)
+                                        if (!block)
+                                            group.group.blackList.add(user.userEmail)
+                                        else
+                                            group.group.blackList.remove(user.userEmail)
                                         mainViewModule.sendUpdatedGroup(group)
                                     }) {
                                         if (block)

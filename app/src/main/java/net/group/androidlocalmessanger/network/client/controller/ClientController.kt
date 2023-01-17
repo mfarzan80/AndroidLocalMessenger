@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import net.group.androidlocalmessanger.data.DataOrException
 import net.group.androidlocalmessanger.module.ResponseCode
 import net.group.androidlocalmessanger.network.client.Client
+import net.group.androidlocalmessanger.network.server.ServerService.Companion.FT_PORT
 
 import net.group.androidlocalmessanger.network.server.ServerService.Companion.PORT
 import net.group.androidlocalmessanger.utils.Utils
@@ -24,14 +25,17 @@ object ClientController {
     lateinit var input: ObjectInputStream
     lateinit var output: ObjectOutputStream
 
+    lateinit var fOutput: ObjectOutputStream
+    lateinit var fInput: ObjectInputStream
+
 
     suspend fun connectAndStartClient(context: Context): DataOrException<Client, Boolean, ResponseCode> {
 
         return withContext(Dispatchers.IO) {
             try {
                 client = Client(Socket(Utils.getServerIP(context), PORT))
-
-                setStreams(context)
+                val fSocket = Socket(Utils.getServerIP(context), FT_PORT)
+                setStreams(context, fSocket)
                 Log.d(TAG, "connectAndStartClient: ${client.socket}")
                 DataOrException(client, false, ResponseCode.OK)
 
@@ -43,11 +47,14 @@ object ClientController {
 
     }
 
-    private fun setStreams(context: Context) {
+    private fun setStreams(context: Context, fSocket: Socket) {
         CoroutineScope(Dispatchers.IO).launch {
             withContext(Dispatchers.IO) {
                 input = ObjectInputStream(client.socket.getInputStream())
                 output = ObjectOutputStream(client.socket.getOutputStream())
+
+                fInput = ObjectInputStream(fSocket.getInputStream())
+                fOutput = ObjectOutputStream(fSocket.getOutputStream())
             }
             ClientReceiver.startReceiver(context)
         }

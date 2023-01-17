@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.FilePresent
+import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,10 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import net.group.androidlocalmessanger.module.Group
 import net.group.androidlocalmessanger.module.Message
 import net.group.androidlocalmessanger.network.client.controller.ClientReceiver
@@ -42,6 +41,7 @@ import net.group.androidlocalmessanger.ui.component.VSpacer
 import net.group.androidlocalmessanger.ui.main.GroupProfile
 import net.group.androidlocalmessanger.ui.main.MainViewModule.Companion.getMe
 import net.group.androidlocalmessanger.ui.navigation.Screen
+import net.group.androidlocalmessanger.utils.Catcher
 import net.group.androidlocalmessanger.utils.FileUtil
 import net.group.androidlocalmessanger.utils.Utils
 import java.io.File
@@ -107,7 +107,10 @@ fun ChatScreen(navController: NavController, chatViewModel: ChatViewModel) {
             }
         }) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Bottom) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Bottom
+            ) {
                 items(chatViewModel.messages) {
                     MessageView(it, ownerSender = chatViewModel.isOwnerUser(it), chat)
                 }
@@ -117,7 +120,7 @@ fun ChatScreen(navController: NavController, chatViewModel: ChatViewModel) {
                 modifier = Modifier.fillMaxWidth()
                     .background(color = MaterialTheme.colors.surface)
             ) {
-                if (canSendMessage(group.group))
+                if (canSendMessage(group.group)) {
                     TextField(
                         modifier = Modifier.weight(1f),
                         colors = TextFieldDefaults.textFieldColors(backgroundColor = MaterialTheme.colors.surface),
@@ -127,7 +130,44 @@ fun ChatScreen(navController: NavController, chatViewModel: ChatViewModel) {
                         },
                         placeholder = { Text("Message", style = MaterialTheme.typography.caption) }
                     )
-                else
+
+                    IconButton(
+                        modifier = Modifier.padding(horizontal = 15.dp),
+                        onClick = {
+                            if (text.value.isNotEmpty()) {
+                                chatViewModel.sendMessage(
+                                    context,
+                                    Message(
+                                        text = text.value,
+                                        getMe(),
+                                        group.group.groupId
+                                    )
+                                )
+                                text.value = ""
+                            } else {
+                                when (PackageManager.PERMISSION_GRANTED) {
+                                    ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.READ_EXTERNAL_STORAGE
+                                    ) -> {
+                                        filePicker.launch("*/*")
+                                    }
+                                    else -> {
+                                        permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                                    }
+                                }
+                            }
+                        }) {
+                        Icon(
+                            imageVector =
+                            if (text.value.isNotEmpty())
+                                Icons.Default.Send
+                            else
+                                Icons.Default.AttachFile,
+                            contentDescription = "send"
+                        )
+                    }
+                } else
                     Text(
                         text = "You can't send Message to this group",
                         modifier = Modifier.fillMaxWidth()
@@ -136,42 +176,7 @@ fun ChatScreen(navController: NavController, chatViewModel: ChatViewModel) {
                         textAlign = TextAlign.Center
                     )
 
-                IconButton(
-                    modifier = Modifier.padding(horizontal = 15.dp),
-                    onClick = {
-                        if (text.value.isNotEmpty()) {
-                            chatViewModel.sendMessage(
-                                context,
-                                Message(
-                                    text = text.value,
-                                    getMe(),
-                                    group.group.groupId
-                                )
-                            )
-                            text.value = ""
-                        } else {
-                            when (PackageManager.PERMISSION_GRANTED) {
-                                ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.READ_EXTERNAL_STORAGE
-                                ) -> {
-                                    filePicker.launch("*/*")
-                                }
-                                else -> {
-                                    permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-                                }
-                            }
-                        }
-                    }) {
-                    Icon(
-                        imageVector =
-                        if (text.value.isNotEmpty())
-                            Icons.Default.Send
-                        else
-                            Icons.Default.AttachFile,
-                        contentDescription = "send"
-                    )
-                }
+
             }
 
         }
@@ -179,7 +184,6 @@ fun ChatScreen(navController: NavController, chatViewModel: ChatViewModel) {
 }
 
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun MessageView(message: Message, ownerSender: Boolean, chat: Boolean) {
     val context = LocalContext.current
@@ -220,7 +224,14 @@ fun MessageView(message: Message, ownerSender: Boolean, chat: Boolean) {
         Card(
             modifier = Modifier
                 .padding(horizontal = 15.dp, vertical = 5.dp)
-                .widthIn(max = 300.dp),
+                .widthIn(max = 300.dp)
+                .clickable {
+                    if (message.attachedFileName != null) {
+                        val path = Catcher(context).getLocalPathByFileName(message.attachedFileName)
+                        if (path != null)
+                            Utils.openFile(context, path)
+                    }
+                },
             shape = RoundedCornerShape(5.dp),
             backgroundColor = backColor
         ) {
@@ -234,16 +245,16 @@ fun MessageView(message: Message, ownerSender: Boolean, chat: Boolean) {
                     VSpacer(10.dp)
                 }
                 if (message.attachedFileName != null)
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         if (fileLoading.value) {
                             CircularProgressIndicator(color = nameColor)
                         } else if (localFile.value != null) {
                             Icon(
-                                imageVector = Icons.Default.AttachFile,
+                                imageVector = Icons.Default.FilePresent,
                                 contentDescription = ""
                             )
                         }
-                        HSpacer(10.dp)
+                        HSpacer(15.dp)
                         Text(message.attachedFileName.toString().split("/").last())
                         Log.d("Screen", "MessageView: ${message.text}")
                     }

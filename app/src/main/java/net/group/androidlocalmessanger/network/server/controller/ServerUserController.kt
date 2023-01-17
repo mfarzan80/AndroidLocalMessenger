@@ -26,9 +26,16 @@ class ServerUserController(private val clientHandler: ClientHandler) {
             }
         )
 
+
         sendUsers()
         clientHandler.groupsController.loadGroupsAndSend()
+    }
 
+    private suspend fun sendUsersToAll() {
+        val users = clientHandler.userRepository.getAllUsers()
+        ServerService.userToClient.values.forEach { clientHandler ->
+            clientHandler.userController.sendUsers(users)
+        }
     }
 
     suspend fun register(orderData: OrderData<*>) {
@@ -56,7 +63,8 @@ class ServerUserController(private val clientHandler: ClientHandler) {
             Log.d(TAG, "register:insertUser $user")
         }
 
-        sendUsers()
+
+        sendUsersToAll()
         clientHandler.groupsController.loadGroupsAndSend()
     }
 
@@ -86,17 +94,18 @@ class ServerUserController(private val clientHandler: ClientHandler) {
 
     suspend fun updateUserProfile(orderData: OrderData<*>) {
         val user = orderData.data as User
-
-        val profilePhoto =
-            clientHandler.receiveFile(user.name + "_ProfilePhoto" + System.nanoTime() + ".jpg")
-        user.profilePath = profilePhoto.path
+        Log.d(TAG, "updateUserProfile: ${user.profilePath}")
+        clientHandler.receiveFile(user.profilePath!!)
         setUpdatedUser(user)
     }
 
 
     suspend fun sendUsers() {
         val users = clientHandler.userRepository.getAllUsers()
+        sendUsers(users)
+    }
 
+    suspend fun sendUsers(users: List<User>) {
         clientHandler.sendResponse(
             Response(
                 code = ResponseCode.OK,

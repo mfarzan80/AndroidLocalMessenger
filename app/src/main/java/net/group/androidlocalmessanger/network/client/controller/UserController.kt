@@ -46,16 +46,18 @@ object UserController {
     }
 
     suspend fun sendUpdateUserRequest(context: Context, user: User) {
-        sendRequest(OrderData(Order.UpdateUser, user))
         if (user.profilePath != ClientController.client.user!!.profilePath) {
             if (user.profilePath != null) {
                 val profilePath = user.profilePath.toString()
                 val fileName = getFileName(profilePath)
                 user.profilePath = fileName
+                sendRequest(OrderData(Order.UpdateUser, user))
                 sendRequest(OrderData(Order.UpdateProfile, user))
                 uploadFile(fileName, profilePath, context)
+                return
             }
         }
+        sendRequest(OrderData(Order.UpdateUser, user))
     }
 
 
