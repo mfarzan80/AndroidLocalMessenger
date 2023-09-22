@@ -5,4 +5,4 @@ A Local messenger that connect with wifi and hotspot and send data with socket
 
 + Create Group and Channel
 + Share any type of file
-+ Fast
+
